@@ -24,7 +24,7 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: Company }) => {
                 <span className="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
                 <div className="flex items-center gap-1.5">
                   <img
-                    src="https://picsum.photos/32/32"
+                    src="/profile-image.png"
                     className="w-4 h-4 rounded-full"
                   />
                   <span>Leslie Alexander</span>
@@ -165,7 +165,7 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: Company }) => {
                   <td className="px-6 py-3">17 October, 2025</td>
                   <td className="px-6 py-3 flex items-center gap-2">
                     <img
-                      src="https://picsum.photos/32/32"
+                      src="/profile-image.png"
                       className="w-4 h-4 rounded-full"
                     />
                     <span>Cody Fischer</span>
@@ -196,7 +196,7 @@ const CompanyDetail = ({ activeCompany }: { activeCompany: Company }) => {
                   <td className="px-6 py-3">17 October, 2025</td>
                   <td className="px-6 py-3 flex items-center gap-2">
                     <img
-                      src="https://picsum.photos/32/32"
+                      src="/profile-image.png"
                       className="w-4 h-4 rounded-full"
                     />
                     <span>Leslie Alexander</span>

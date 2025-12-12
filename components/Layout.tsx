@@ -90,7 +90,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <div className="relative">
                 <Image
-                  src="https://picsum.photos/32/32"
+                  src="/profile-image.png"
                   alt="Profile"
                   width={32}
                   height={32}
