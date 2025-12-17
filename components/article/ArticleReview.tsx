@@ -244,11 +244,11 @@ export default function ArticleReview({
                   <div
                     onClick={() => setActiveArticleId(article.id)}
                     className={`
-                  py-2 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs
+                  py-2 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs w-[153px]
                   ${colorClass}
                 `}
                   >
-                    <h3 className="font-bold text-xs mb-2 text-neutral-900 font-poppins leading-[140%] tracking-[0]">
+                    <h3 className="font-bold text-xs mb-2 text-neutral-900 font-poppins leading-[140%] tracking-[0] line-clamp-5">
                       {article.header}
                     </h3>
                     <p className="text-xs text-neutral-900 line-clamp-8 leading-relaxed font-poppins">
