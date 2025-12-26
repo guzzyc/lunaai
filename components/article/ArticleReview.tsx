@@ -1,7 +1,7 @@
 "use client";
 
 import { definition as Definition } from "@/app/generated/prisma/client";
-import { TRAINING_COLORS, TRAINING_COLORS_LIGHT } from "@/lib/data/news-data";
+import { feedbackColorMap, TRAINING_COLORS, TRAINING_COLORS_LIGHT } from "@/lib/data/news-data";
 import { ArticlesArrayType } from "@/lib/types/news-types";
 import { formatDate } from "@/lib/utils";
 import {
@@ -70,7 +70,7 @@ export default function ArticleReview({
   const [addingCleaningFeedback, setAddingCleaningFeedback] = useState(false);
   const [applyingFilters, setApplyingFilters] = useState(false);
   const [articleColors, setArticleColors] = useState<
-    Record<number, { normal: string; light: string }>
+    Record<number, { normal: string | null; light: string | null }>
   >({});
   const [leftSidebarWidth, setLeftSidebarWidth] = useState<number>(
     Number(leftWidth.value ?? "20")
@@ -170,10 +170,21 @@ export default function ArticleReview({
   };
 
   useEffect(() => {
-    const colors: Record<number, { normal: string; light: string }> = {};
+    const colors: Record<
+      number,
+      { normal: string | null; light: string | null }
+    > = {};
 
     articles.forEach((article) => {
-      const index = Math.floor(Math.random() * TRAINING_COLORS.length);
+      const likeValue = article.news_training?.[0]?.like;
+
+      if (!likeValue) {
+        colors[article.id] = { normal: null, light: null }; 
+        return;
+      }
+
+      const index = likeValue - 1; 
+
       colors[article.id] = {
         normal: TRAINING_COLORS[index],
         light: TRAINING_COLORS_LIGHT[index],
@@ -282,6 +293,12 @@ export default function ArticleReview({
     };
 
     const feedbackNumber = feedbackMap[feedbackType];
+
+    setArticleColors(prev => ({
+    ...prev,
+    [activeArticleId]: feedbackColorMap[feedbackType],
+    
+  }));
     try {
       await insertCleaningFeedback(feedbackNumber, activeArticleId);
       toast.success("Feedback added successfully", { richColors: true });
@@ -488,9 +505,9 @@ export default function ArticleReview({
           <div className="flex-1 overflow-y-auto py-4  space-y-4 scrollbar-custom ">
             {articles && articles.length > 0 ? (
               articles.map((article, idx) => {
-                const colorClass =
-                  articleColors[article.id]?.normal ?? "border-normal";
+                const colorClass = articleColors[article.id]?.normal ?? "";
 
+                console.log("left color", colorClass);
                 const formattedContent =
                   article?.content?.replace(/\\n/g, "\n") ?? "";
 

@@ -12,16 +12,29 @@ export const FILTERS: FilterGroup[] = [
 ];
 
 export const TRAINING_COLORS = [
-  "border-danger",
-  "border-success",
-  "border-normal",
+  "border-danger",     
+  "border-success",   
 ];
 
 export const TRAINING_COLORS_LIGHT = [
   "border-danger/40",
   "border-success/40",
-  "border-normal/40",
 ];
+
+export const feedbackColorMap = {
+  dislike: {
+    normal: TRAINING_COLORS[0],        // red
+    light: TRAINING_COLORS_LIGHT[0],
+  },
+  like: {
+    normal: TRAINING_COLORS[1],        // green
+    light: TRAINING_COLORS_LIGHT[1],
+  },
+  notsure: {
+    normal: null,                      // neutral
+    light: null,
+  },
+};
 
 export const COMPANY_TAGS_MAP: { [key: string]: string } = {
   "1": "Big company",
