@@ -1,7 +1,11 @@
 "use client";
 
 import { definition as Definition } from "@/app/generated/prisma/client";
-import { feedbackColorMap, TRAINING_COLORS, TRAINING_COLORS_LIGHT } from "@/lib/data/news-data";
+import {
+  feedbackColorMap,
+  TRAINING_COLORS,
+  TRAINING_COLORS_LIGHT,
+} from "@/lib/data/news-data";
 import { ArticlesArrayType } from "@/lib/types/news-types";
 import { formatDate } from "@/lib/utils";
 import {
@@ -18,12 +22,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import FeedBackModal from "./FeedBackModal";
 import AddCompanyModal from "../company/AddCompanyModal";
-import { saveSidebarWidths } from "@/app/actions/widthActions";
+import { saveSidebarWidths } from "@/lib/actions/widthActions";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import CleaningFeedBackModal from "./CleaningFeedbackModal";
 import { toast } from "sonner";
-import { insertCleaningFeedback } from "@/app/actions/cleaningFeedbackAction";
-import { applyTrainingFilters } from "@/app/actions/trainingCategoryAction";
+import { insertCleaningFeedback } from "@/lib/actions/cleaningFeedbackAction";
+import { applyTrainingFilters } from "@/lib/actions/trainingCategoryAction";
+import Link from "next/link";
 
 interface ArticleReviewProps {
   articles: ArticlesArrayType;
@@ -34,6 +39,7 @@ interface ArticleReviewProps {
   tags: Definition[];
   leftWidth: Definition;
   rightWidth: Definition;
+  feedbacks: string[];
 }
 
 export default function ArticleReview({
@@ -45,16 +51,22 @@ export default function ArticleReview({
   tags,
   leftWidth,
   rightWidth,
+  feedbacks,
 }: ArticleReviewProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const [activeArticleId, setActiveArticleId] = useState<number>(
-    articles[0]?.id
-  );
+  // const [activeArticleId, setActiveArticleId] = useState<number>(
+  //   articles[0]?.id
+  // );
+  const activeArticleId =
+    Number(searchParams.get("activeNews")) || articles[0]?.id;
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
   const [selectedText, setSelectedText] = useState<string>("");
+  const [selectedWordCount, setSelectedWordCount] = useState<number>();
+  const [allowNext, setAllowNext] = useState<boolean>(false);
+  const [selectedRange, setSelectedRange] = useState<Range | null>(null);
   const [addCompanyModalOpened, setAddCompanyModalOpened] =
     useState<boolean>(false);
   const [checkedFilters, setCheckedFilters] = useState<Record<string, boolean>>(
@@ -67,6 +79,7 @@ export default function ArticleReview({
     "classifying" | "cleaning"
   >(initialType);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [notes, setNotes] = useState<string[]>(feedbacks ?? []);
   const [addingCleaningFeedback, setAddingCleaningFeedback] = useState(false);
   const [applyingFilters, setApplyingFilters] = useState(false);
   const [articleColors, setArticleColors] = useState<
@@ -116,11 +129,22 @@ export default function ArticleReview({
     const handleSelection = () => {
       const selection = window.getSelection();
 
+      if (selection && selection.rangeCount > 0) {
+        setSelectedRange(selection?.getRangeAt(0));
+      }
+
       // ensure selection is within our content area
       if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
         setSelectionRect(null);
         setSelectedText("");
         return;
+      }
+
+      if (
+        typeof activeArticle?.content === "string" &&
+        activeArticle.content.length < 550
+      ) {
+        setSelectionRect(null);
       }
 
       const range = selection.getRangeAt(0);
@@ -134,6 +158,10 @@ export default function ArticleReview({
       const rect = range.getBoundingClientRect();
 
       setSelectionRect(rect);
+      const text = selection.toString().trim();
+      const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
+      setSelectedText(text);
+      setSelectedWordCount(wordCount);
       setSelectedText(selection.toString());
     };
 
@@ -159,10 +187,19 @@ export default function ArticleReview({
     };
   }, [selectionRect]);
 
+  // persist the selection to local state by highlighting
   const handleSelectText = () => {
-    console.log("Selected Text:", selectedText);
-    window.getSelection()?.removeAllRanges();
-    setSelectionRect(null);
+    if (!selectedRange) return;
+
+    const span = document.createElement("span");
+    span.style.backgroundColor = "#BFDBFE"; 
+    span.style.padding = "2px";
+    span.className = "selected-highlight"; 
+
+    selectedRange.surroundContents(span); 
+    window.getSelection()?.removeAllRanges(); 
+    setSelectionRect(null); 
+    setAllowNext(true);
   };
 
   const toggleFilter = (option: string) => {
@@ -179,12 +216,11 @@ export default function ArticleReview({
       const likeValue = article.news_training?.[0]?.like;
 
       if (!likeValue) {
-        colors[article.id] = { normal: null, light: null }; 
+        colors[article.id] = { normal: null, light: null };
         return;
       }
 
-      const index = likeValue - 1; 
-
+      const index = likeValue - 1;
       colors[article.id] = {
         normal: TRAINING_COLORS[index],
         light: TRAINING_COLORS_LIGHT[index],
@@ -294,14 +330,13 @@ export default function ArticleReview({
 
     const feedbackNumber = feedbackMap[feedbackType];
 
-    setArticleColors(prev => ({
-    ...prev,
-    [activeArticleId]: feedbackColorMap[feedbackType],
-    
-  }));
+    setArticleColors((prev) => ({
+      ...prev,
+      [activeArticleId]: feedbackColorMap[feedbackType],
+    }));
     try {
       await insertCleaningFeedback(feedbackNumber, activeArticleId);
-      toast.success("Feedback added successfully", { richColors: true });
+      // toast.success("Feedback added successfully", { richColors: true });
       shiftNextNews();
     } catch (err) {
       toast.error("Failed to add feedback", { richColors: true });
@@ -316,10 +351,16 @@ export default function ArticleReview({
 
     const currentIndex = articles.findIndex((a) => a.id === activeArticleId);
     const nextIndex = (currentIndex + 1) % articles.length;
-    setActiveArticleId(articles[nextIndex].id);
+    handleSetActiveNews(articles[nextIndex].id);
   };
 
   const handleApplyFilters = async () => {
+    if (!selectedRange || !allowNext) {
+      toast.info("Please make text selection from the news", {
+        richColors: true,
+      });
+      return;
+    }
     setApplyingFilters(true);
     const filterIds: string[] = Object.entries(checkedFilters)
       .filter(([, checked]) => checked)
@@ -372,6 +413,25 @@ export default function ArticleReview({
       element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [activeArticleId]);
+
+  useEffect(() => {
+    if (!articles || articles.length === 0) return;
+
+    if (searchParams.get("activeNews")) return;
+
+    const firstId = articles[0].id;
+
+    router.replace(
+      `${pathname}?${searchParams.toString()}&activeNews=${firstId}`,
+      { scroll: false }
+    );
+  }, [articles, searchParams, pathname, router]);
+
+  const handleSetActiveNews = (articleId: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("activeNews", articleId.toString());
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   return (
     <div ref={containerRef} className="flex flex-col h-full bg-white">
@@ -446,9 +506,13 @@ export default function ArticleReview({
               className="flex gap-2 items-center cursor-pointer rounded-lg h-7"
             >
               {/* <Globe size={14} className="text-subtitle-dark/80" /> */}
-              <span className="text-xs text-subtitle-dark font-semibold">
+              <Link
+                target="#"
+                href={activeArticle.url ?? ""}
+                className="text-xs text-subtitle-dark font-semibold"
+              >
                 Go web
-              </span>
+              </Link>
             </Button>
             <Button
               size="sm"
@@ -521,7 +585,7 @@ export default function ArticleReview({
                     className="flex flex-col items-center gap-2 scroll-mt-2"
                   >
                     <div
-                      onClick={() => setActiveArticleId(article.id)}
+                      onClick={() => handleSetActiveNews(article.id)}
                       className={`
                   py-2 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs min-w-[153px] w-[78%]
                   ${colorClass}
@@ -597,10 +661,10 @@ export default function ArticleReview({
                     <span className="font-bold text-subtitle-dark text-sm">
                       {activeArticle.news_source?.name ?? "Unknown Source"}
                     </span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
+                    {/* <span className="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
                     <span className="text-subtitle-dark font-medium text-sm">
                       {activeArticle.author || "Unknown author"}
-                    </span>
+                    </span> */}
                     <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 "></span>
                     <span className="text-subtitle-dark font-medium text-sm">
                       {formatDate(activeArticle.published_date)}
@@ -627,7 +691,7 @@ export default function ArticleReview({
                 }}
               >
                 <span className="text-xs font-semibold font-mono">
-                  {selectedText.length}
+                  {selectedWordCount ?? 0}
                 </span>
                 <div className="h-3 w-px bg-neutral-400"></div>
                 <button
@@ -667,7 +731,7 @@ export default function ArticleReview({
                     <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
                       Category
                     </h3>
-                    <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" />
+                    {/* <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" /> */}
                   </div>
                   <div className="space-y-3">
                     {categories?.map((option, i) => (
@@ -718,7 +782,7 @@ export default function ArticleReview({
                     <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
                       Industry
                     </h3>
-                    <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" />
+                    {/* <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" /> */}
                   </div>
                   <div className="space-y-3">
                     {industries?.map((option, i) => (
@@ -773,6 +837,7 @@ export default function ArticleReview({
                   onClick={handleApplyFilters}
                   variant="outline"
                   size="sm"
+                  disabled={!Object.values(checkedFilters).some((v) => v)}
                   className="flex items-center gap-2 rounded-full w-full text-subtitle-dark text-xs font-bold cursor-pointer"
                 >
                   {applyingFilters && (
@@ -782,11 +847,27 @@ export default function ArticleReview({
                 </Button>
               )}
 
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col gap-3 justify-between mb-4">
                 <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
                   Notes
                 </h3>
-                <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" />
+                {notes?.length === 0 ? (
+                  <p className="text-neutral-500 text-sm text-center">
+                    No notes yet.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {notes.map((note, i) => (
+                      <li
+                        key={i}
+                        className="p-3 rounded-md border bg-neutral-50 text-xs text-neutral-800"
+                      >
+                        {note}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {/* <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" /> */}
               </div>
 
               <Button
@@ -802,9 +883,9 @@ export default function ArticleReview({
                   className="flex items-center p-0 m-0 "
                 />
                 <span className="text-sm font-semibold">Feedback</span>
-                <div className="rounded-full bg-red-600 text-[10px] text-white px-2 py-1 flex items-center justify-center leading-normal">
+                {/* <div className="rounded-full bg-red-600 text-[10px] text-white px-2 py-1 flex items-center justify-center leading-normal">
                   145
-                </div>
+                </div> */}
               </Button>
             </div>
           </div>
@@ -834,7 +915,14 @@ export default function ArticleReview({
         </aside>
 
         {showFeedbackModal && (
-          <FeedBackModal closeModal={() => setShowFeedbackModal(false)} />
+          <FeedBackModal
+            closeModal={() => setShowFeedbackModal(false)}
+            pageType={trainingPageType}
+            newsId={activeArticleId}
+            onAddFeedback={(content) => {
+              setNotes((prev) => [...prev,content]);
+            }}
+          />
         )}
       </div>
 

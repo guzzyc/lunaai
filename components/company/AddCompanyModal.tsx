@@ -21,7 +21,7 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
 import { definition as Definition } from "@/app/generated/prisma/client";
-import { createCompany } from "@/app/actions/createCompanyAction";
+import { createCompany } from "@/lib/actions/createCompanyAction";
 import { toast } from "sonner";
 import { ArticlesArrayType } from "@/lib/types/news-types";
 

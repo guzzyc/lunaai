@@ -36,18 +36,13 @@ export async function getArticles(
           news_id: true,
           category: true,
           user_id: true,
-          like:true
+          like: true,
         },
       },
     },
-    where:
-      trainingType === "classifying"
-        ? {
-            id: { in: ids },
-          }
-        : {
-            id: { notIn: ids },
-          },
+    where: {
+      id: { in: ids },
+    },
   });
 
   return news;
@@ -107,7 +102,7 @@ export async function getWidth(
   }
 
   const userId = session.user.id;
-  
+
   const leftName = `width:training-${trainingType}-left;user:${userId}`;
   const rightName = `width:training-${trainingType}-right;user:${userId}`;
 
@@ -126,4 +121,23 @@ export async function getTrainings() {
   const trainings = await prisma.training.findMany();
 
   return trainings;
+}
+
+export async function getFeedbacks(newsId: number) {
+  const session = await getServerSession(authOptions);
+  if (!session) throw new Error("Unauthorized");
+
+  const userId = session.user.id;
+
+  const rows = await prisma.news_training.findMany({
+    where: {
+      news_id: newsId,
+      user_id: userId,
+      feedback: { not: null },
+    },
+    orderBy: { time_stamp: "asc" },
+    select: { feedback: true },
+  });
+
+  return rows.map((r) => r.feedback as string);
 }

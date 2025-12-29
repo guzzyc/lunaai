@@ -10,7 +10,7 @@
   --color-subtitle-dark: #475569;
   --color-danger: #CB0000;
   --color-success: #00930A;
-  --color-normal: #00930A;
+  --color-normal: #e3e3e3;
   --scrollbar-thumb-color: #ECECEC;
   --scrollbar-track-color: #F8FAFC;
   --icon-dark: #94A3B8;
@@ -66,7 +66,7 @@
   --color-subtitle-dark: var(--color-subtitle-dark);
   --color-danger: var(--color-danger);
   --color-success: var(--color-success);
-  --color-normal: var(--color-success);
+  --color-normal: var(--color-normal);
   --color-icon-dark: var(--icon-dark);
   --color-border-dark: var(--border-dark);
   --color-bg-main: var(--bg-main);
