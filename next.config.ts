@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // CRITICAL: This enables the lightweight production build for Azure
+  output: "standalone", 
+  
   /* config options here */
   reactCompiler: true,
   images: {

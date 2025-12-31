@@ -3,7 +3,7 @@ name: Deploy to Azure Web App
 on:
   push:
     branches:
-      - main  # Or your specific branch name
+      - main
 
 jobs:
   build-and-deploy:
@@ -16,6 +16,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm' # Hızlı kurulum için cache ekledik
 
       - name: Install, Generate Prisma, and Build
         run: |
@@ -23,8 +24,16 @@ jobs:
           npx prisma generate
           npm run build
 
+      # KRİTİK ADIM: Statik dosyaları standalone klasörüne taşıyoruz
+      - name: Prepare Standalone Assets
+        run: |
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'lunawebapp' # Replace with your actual App Name
+          app-name: 'lunawebapp'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          # Sadece gerekli olan standalone klasörünü yüklüyoruz (hız kazandırır)
+          package: .next/standalone
