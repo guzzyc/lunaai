@@ -47,24 +47,19 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (account?.provider === "azure-ad") {
-        const email = user.email?.toLowerCase();
-        
-        // Example 1: Allow everyone from your company domain
-        const allowedDomain = "@luna.ai"; 
-        
-        // Example 2: Allow specific external users
-        const allowedEmails = ["partner@example.com", "consultant@gmail.com"];
-
-        // Check if email matches domain OR is in the allowlist
-        if (email?.endsWith(allowedDomain) || allowedEmails.includes(email || "")) {
-          return true; // Access Granted
+      try {
+        if (account?.provider === "azure-ad") {
+          console.log("[Auth] Azure AD SignIn Initiated", { 
+            user: { id: user?.id, email: user?.email, name: user?.name },
+            account: { provider: account?.provider, type: account?.type },
+            profile: profile ? "Profile data present" : "No profile data"
+          });
         }
-
-        console.log(`Access denied for: ${email}`);
-        return false; // Access Denied
+        return true; // Always allow access
+      } catch (error) {
+        console.error("[Auth] CRITICAL ERROR in signIn callback (Logged only, allowing access):", error);
+        return true; // Fail safe by allowing access even on system error per instruction
       }
-      return true;
     },
     async jwt({ token, user }) {
       if (user) token.id = user.id as number;
