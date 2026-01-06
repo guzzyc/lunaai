@@ -15,6 +15,11 @@ export const authOptions: AuthOptions = {
       clientId: process.env.AZURE_AD_CLIENT_ID!,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
       tenantId: process.env.AZURE_AD_TENANT_ID,
+      authorization: {
+        params: {
+          domain_hint: process.env.AZURE_AD_DOMAIN_HINT, // Configurable hint
+        },
+      },
     }),
     CredentialsProvider({
       name: "Credentials",

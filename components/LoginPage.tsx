@@ -22,28 +22,32 @@ const LoginPage = () => {
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
 
   React.useEffect(() => {
-    // Check if we have already tried to auto-login this session
-    const hasTried = sessionStorage.getItem("tried_entra_auto_login");
+    // Only attempt auto-login if the user has previously chosen Azure AD
+    // and we haven't just been redirected back from a failure (check query params for error)
+    const preferredProvider = localStorage.getItem("preferred_auth_provider");
+    const params = new URLSearchParams(window.location.search);
+    const hasError = params.get("error");
 
-    if (!hasTried) {
-      // First visit: Try to auto-login with Azure AD
-      console.log("Attempting auto-login with Entra ID...");
+    if (preferredProvider === "azure" && !hasError) {
+      console.log("User prefers Azure AD. Attempting auto-login...");
       setAutoLoginAttempted(true);
-      setLoading(true);
-      sessionStorage.setItem("tried_entra_auto_login", "true");
-      
-      // Attempt sign in
       signIn("azure-ad", { callbackUrl: "/trainings?type=cleaning" });
     }
   }, []);
+
+  const handleAzureLogin = () => {
+    // Save preference so next time we auto-login
+    localStorage.setItem("preferred_auth_provider", "azure");
+    signIn("azure-ad", { callbackUrl: "/trainings?type=cleaning" });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
-    // Clear the auto-login flag on manual attempt so it retries next time they visit fresh
-    sessionStorage.removeItem("tried_entra_auto_login");
+    
+    // If they use credentials, ensure we clear any azure preference
+    localStorage.removeItem("preferred_auth_provider");
 
     const res = await signIn("credentials", {
       email,
@@ -174,7 +178,7 @@ const LoginPage = () => {
         <Button 
           variant="outline" 
           className="w-full flex items-center gap-2 cursor-pointer"
-          onClick={() => signIn("azure-ad", { callbackUrl: "/trainings?type=cleaning" })}
+          onClick={handleAzureLogin}
           type="button"
         >
           <svg className="h-5 w-5" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
