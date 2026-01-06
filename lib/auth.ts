@@ -87,10 +87,6 @@ export const authOptions: AuthOptions = {
           if (dbUser) {
             console.log(`[Auth] Linked Azure AD user ${user.email} to DB User ID ${dbUser.id}`);
             token.id = dbUser.id; // SWAP the String ID for the Integer ID
-          } else {
-             // Optional: If they don't exist in DB, you could create them here, 
-             // or keep the string ID (which will return empty data as per your safety checks).
-             token.id = user.id;
           }
         }
       }
