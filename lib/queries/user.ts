@@ -61,7 +61,9 @@ export async function getWeeklyTargetProgress(
 
   const targetData = await prisma.definition.findFirst({
     where: {
-      name: targetName,
+      name: {
+        startsWith:targetName
+      },
     },
   });
   const totalWeeklyTargets =

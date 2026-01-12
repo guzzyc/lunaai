@@ -1,3 +1,5 @@
+import { NewsSourceType } from "./news-types";
+
 export type UserRole = 'admin' | 'user' | '';
 
 export interface User {
@@ -17,6 +19,8 @@ export interface TargetItem {
   user?: string;
   userId?: number;
   trainingType:string;
+  sourceId:string;
+  sourceName:string;
   value:string
 }
 

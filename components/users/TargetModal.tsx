@@ -43,6 +43,7 @@ import {
 
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NewsSourceType } from "@/lib/types/news-types";
 
 interface TargetModalProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ interface TargetModalProps {
   editingTarget: TargetItem | null;
   activeTab?: TabType;
   users: User[];
+  newsSourcesOptions:NewsSourceType[]
 }
 
 const trainingTypeOptions = [
@@ -69,6 +71,7 @@ const TargetModal: React.FC<TargetModalProps> = ({
   onDelete,
   activeTab,
   users,
+  newsSourcesOptions
 }) => {
   const [selectedUserId, setSelectedUserId] = useState<number>();
   const [isUserSelectorOpen, setUserSelectorOpen] = useState(false);
@@ -79,9 +82,12 @@ const TargetModal: React.FC<TargetModalProps> = ({
   const [formData, setFormData] = useState<TargetItem>({
     trainingType: "",
     value: "",
+    sourceId:"",
+    sourceName:""
   });
   const [errors, setErrors] = useState<{
     trainingType?: string;
+    source?: string;
     value?: string;
   }>({});
 
@@ -93,6 +99,8 @@ const TargetModal: React.FC<TargetModalProps> = ({
         id: editingTarget.id,
         user: editingTarget.user,
         userId: editingTarget.userId,
+        sourceId:editingTarget.sourceId,
+        sourceName:editingTarget.sourceName
       });
       setSelectedUserId(editingTarget.userId);
       console.log("editing target detected", editingTarget);
@@ -102,6 +110,8 @@ const TargetModal: React.FC<TargetModalProps> = ({
         value: "",
         id: undefined,
         user: "",
+        sourceId:"",
+        sourceName:""
       });
     }
     setErrors({});
@@ -134,6 +144,7 @@ const TargetModal: React.FC<TargetModalProps> = ({
             value: formData.value,
             trainingType: formData.trainingType,
             userId: selectedUserId as number,
+            sourceId:formData.sourceId
           });
           toast.success("Target updated successfully", {
             richColors: true,
@@ -144,6 +155,7 @@ const TargetModal: React.FC<TargetModalProps> = ({
             trainingType: formData.trainingType,
             value: formData.value,
             userId: selectedUserId as number,
+            sourceId:formData.sourceId
           });
           toast.success("Target added successfully", { richColors: true });
           onSubmit(result);
@@ -287,6 +299,37 @@ const TargetModal: React.FC<TargetModalProps> = ({
             </Select>
             {errors.trainingType && (
               <p className="mt-1 text-xs text-danger">{errors.trainingType}</p>
+            )}
+          </div>
+
+          <div className="w-full">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Source
+            </label>
+            <Select
+              key={formData.sourceId || "empty"}
+              onValueChange={(value) => {
+                setFormData({ ...formData, sourceId: value });
+                setErrors({ ...errors, source: undefined });
+              }}
+              value={formData.sourceId}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a training type" />
+              </SelectTrigger>
+              <SelectContent className="z-[999]">
+                <SelectGroup>
+                  <SelectLabel>Source</SelectLabel>
+                  {newsSourcesOptions?.map((source) => (
+                    <SelectItem key={source.id} value={source.id.toString()}>
+                      {source.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            {errors.source && (
+              <p className="mt-1 text-xs text-danger">{errors.source}</p>
             )}
           </div>
 

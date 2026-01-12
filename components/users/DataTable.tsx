@@ -6,6 +6,7 @@ import {
   User,
 } from "@/lib/types/user-types";
 import { cn } from "@/lib/utils";
+import { NewsSourceType } from "@/lib/types/news-types";
 
 interface DataTableProps {
   data: (User | DefinitionItem | TargetItem)[];
@@ -14,6 +15,7 @@ interface DataTableProps {
   onSelect?: (data: User | DefinitionItem | TargetItem) => void;
   selectedData?: User | DefinitionItem | TargetItem | null;
   activeTab: TabType;
+  newsSourcesOptions:NewsSourceType[]
 }
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -23,6 +25,7 @@ const DataTable: React.FC<DataTableProps> = ({
   onSelect,
   selectedData,
   activeTab,
+  newsSourcesOptions
 }) => {
   const isUserTab = activeTab === "Users";
   const isTargetTab = activeTab === "Target";
@@ -46,6 +49,9 @@ const DataTable: React.FC<DataTableProps> = ({
               <>
                 <th className="px-6 py-4 text-sm font-semibold text-subtitle-dark">
                   User
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-subtitle-dark">
+                  Source
                 </th>
                 <th className="px-6 py-4 text-sm font-semibold text-subtitle-dark">
                   Training type
@@ -93,6 +99,9 @@ const DataTable: React.FC<DataTableProps> = ({
                   <>
                     <td className="px-6 py-4 text-sm text-subtitle-dark font-medium">
                       {(item as TargetItem).user}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-subtitle-dark font-medium">
+                      {(item as TargetItem).sourceName ?? "-"}
                     </td>
                     <td className="px-6 py-4 text-sm text-subtitle-dark font-medium">
                       {(item as TargetItem).trainingType}

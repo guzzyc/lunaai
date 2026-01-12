@@ -6,6 +6,7 @@ import {
   getTargets,
   getTags,
   getTaskTypes,
+  geteNewsSources,
 } from "@/lib/queries/definition";
 import { getUsers } from "@/lib/queries/user";
 import { getServerSession } from "next-auth";
@@ -25,6 +26,7 @@ export default async function Page() {
     tagData,
     taskTypeData,
     targetData,
+    newsSourcesData
   ] = await Promise.all([
     getUsers(),
     getCategories(),
@@ -32,6 +34,7 @@ export default async function Page() {
     getTags(),
     getTaskTypes(),
     getTargets(),
+    geteNewsSources()
   ]);
   if (!userData.ok) {
     unauthorized();
@@ -44,6 +47,7 @@ export default async function Page() {
       initialTags={tagData}
       initialTaskTypes={taskTypeData}
       initialTargets={targetData}
+      newsSourcesOptions={newsSourcesData}
     />
   );
 }

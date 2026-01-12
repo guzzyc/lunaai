@@ -16,6 +16,7 @@ import { set } from "zod";
 import DataTable from "./DataTable";
 import DefinitionModal from "./DefinitionModal";
 import TargetModal from "./TargetModal";
+import { NewsSourceType } from "@/lib/types/news-types";
 
 interface SettingsPageProps {
   initialUsers: User[];
@@ -24,6 +25,7 @@ interface SettingsPageProps {
   initialTags: DefinitionItem[];
   initialTaskTypes: DefinitionItem[];
   initialTargets: TargetItem[];
+  newsSourcesOptions:NewsSourceType[]
 }
 
 export default function SettingsPage({
@@ -33,6 +35,7 @@ export default function SettingsPage({
   initialTags,
   initialTaskTypes,
   initialTargets,
+  newsSourcesOptions
 }: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState<TabType>("Users");
   const [users, setUsers] = useState<User[]>(initialUsers);
@@ -254,6 +257,7 @@ export default function SettingsPage({
           onDelete={handleDeleteData}
           onSelect={(data) => setSelectedData(data)}
           selectedData={selectedData}
+          newsSourcesOptions={newsSourcesOptions}
         />
       </div>
       <UserModal
@@ -282,6 +286,7 @@ export default function SettingsPage({
         onDelete={handleDeleteData}
         activeTab={activeTab}
         users={users}
+        newsSourcesOptions={newsSourcesOptions}
       />
     </main>
   );

@@ -103,12 +103,18 @@ export async function getTargets(): Promise<TargetItem[]> {
 
   const userMap = new Map(users.map((u) => [String(u.id), u.name]));
 
-  const targets: TargetItem[] = data.map((def) => {
+  const targets = await Promise.all(data.map(async (def) => {
     const name = def.name ?? "";
-    const [targetPart = "", userPart = ""] = name.split(";");
+    const [targetPart = "", userPart = "", sourcePart = ""] = name.split(";");
 
     const trainingType = targetPart.replace("target:training-", "");
     const userId = userPart.replace("user:", "");
+    const sourceId = sourcePart.replace("sourceid:","")
+
+    let source;
+    if(sourceId){
+      source = await prisma.news_source.findUnique({where:{id:parseInt(sourceId)}})
+    }
 
     return {
       id: def.id,
@@ -116,8 +122,24 @@ export async function getTargets(): Promise<TargetItem[]> {
       userId: Number(userId),
       trainingType,
       value: def.value,
+      sourceId:source && source.id.toString() as string,
+      sourceName:source && source.name as string,
     } as TargetItem;
-  });
+  }));
 
   return targets;
+}
+
+
+export async function geteNewsSources() {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const news_sources = await prisma.news_source.findMany({
+  });
+
+  return news_sources
 }

@@ -114,6 +114,8 @@ export default function ArticleReview({
   );
   const [isResizingRight, setIsResizingRight] = useState(false);
   const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isShowingSelectedNews, setShowingSelectedNews] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const leftWidthRef = useRef(leftSidebarWidth);
   const rightWidthRef = useRef(rightSidebarWidth);
@@ -326,8 +328,8 @@ export default function ArticleReview({
 
     if (trainingPageType == "classifying" && centerArticle) {
       const centerLikeValue = (centerArticle as TrainedArticleType)
-      ?.news_training?.[0]?.like;
-      
+        ?.news_training?.[0]?.like;
+
       if (!centerLikeValue) {
         colors[centerArticle.id] = { normal: null, light: null };
         return;
@@ -467,6 +469,8 @@ export default function ArticleReview({
     try {
       const nextNews = await fetchNextCenterNews(trainingPageType);
       if (!nextNews) {
+        handleSetActiveNews(centerArticle?.id as number);
+        setCenterArticle(null);
         return;
       }
       setCenterArticle(nextNews);
@@ -653,6 +657,12 @@ export default function ArticleReview({
     params.set("activeNews", article.id.toString());
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setCenterArticle(article);
+    setShowingSelectedNews(true);
+  };
+
+  const handleContinueClicked = () => {
+    shiftNextNews();
+    setShowingSelectedNews(false);
   };
 
   const hasAtLeastOneCategoryAndIndustry = (() => {
@@ -832,12 +842,12 @@ export default function ArticleReview({
                       if (el) articleListRefs.current.set(article.id, el);
                       else articleListRefs.current.delete(article.id);
                     }}
-                    className="flex flex-col items-center gap-2 scroll-mt-2"
+                    className="flex flex-col items-center gap-2 scroll-mt-2 relative"
                   >
                     <div
                       onClick={() => handleClickTrainedNews(article)}
                       className={`
-                  py-2 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs min-w-[153px] w-[78%]
+                  pt-2 pb-3 px-2 rounded-2xl border-3 cursor-pointer transition-all duration-200 hover:shadow-sm relative group bg-white shadow-xs min-w-[153px] w-[78%]
                   ${colorClass}
                 `}
                     >
@@ -847,6 +857,10 @@ export default function ArticleReview({
                       <p className="text-xs text-neutral-900 line-clamp-8 leading-relaxed font-poppins">
                         {formattedContent}
                       </p>
+
+                      <div className="absolute -right-2 -bottom-2 text-xs rounded-lg bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-[10px] font-bold text-neutral-600 w-fit px-2 py-[3px]">
+                        {article?.id}
+                      </div>
                     </div>
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium text-neutral-900">
                       {articlesList.length - idx}
@@ -965,80 +979,6 @@ export default function ArticleReview({
             No new news available
           </div>
         )}
-
-        {/* article content
-        {(trainedCenterArticle && centerArticleType === "trained") ? (
-          <section
-            ref={scrollContainerRef}
-            className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom"
-          >
-            <div
-              className={`my-6 rounded-3xl border-6 shadow-sm h-fit w-[93%] `}
-            >
-              <div
-                className={`bg-white min-h-full p-12 shadow-sm relative border-x rounded-[18px] border`}
-              >
-                <div className="text-title-red font-bold text-sm tracking-wider uppercase px-2 py-1 mb-2 rounded w-fit ml-auto">
-                  {trainedCenterArticle.company_news[0]?.company?.name || "-"}
-                </div>
-
-                <div className="mb-6 mt-2">
-                  <h1 className="text-xl font-bold text-title-dark mb-4 leading-tight">
-                    {trainedCenterArticle.header}
-                  </h1>
-                  <div className="flex items-center flex-wrap gap-x-2 gap-y-2 text-sm text-neutral-500">
-                    <span className="font-bold text-subtitle-dark text-sm">
-                      {trainedCenterArticle.news_source?.name ??
-                        "Unknown Source"}
-                    </span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 "></span>
-                    <span className="text-subtitle-dark font-medium text-sm">
-                      {formatDate(trainedCenterArticle.published_date)}
-                    </span>
-                  </div>
-                </div>
-
-                <div ref={contentRef}>
-                  <div className="prose prose-sm max-w-none text-title-dark/90 text-sm leading-8 selection:bg-blue-100 selection:text-blue-900 whitespace-pre-wrap">
-                    {formattedActiveArticleContent ?? ""}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {selectionRect && (
-              <div
-                className="fixed z-100 bg-white text-title-dark shadow-xl px-3 py-1.5 flex items-center gap-3 animate-in fade-in zoom-in-95 duration-200 border border-gray-300 rounded-md"
-                style={{
-                  top: `${selectionRect.top - 48}px`,
-                  left: `${selectionRect.left + selectionRect.width / 2}px`,
-                  transform: "translateX(-50%)",
-                }}
-              >
-                <span className="text-xs font-semibold font-mono">
-                  {selectedWordCount ?? 0}
-                </span>
-                <div className="h-3 w-px bg-neutral-400"></div>
-                <button
-                  onClick={handleSelectText}
-                  className="text-xs font-bold text-blue-500 hover:text-blue-700 cursor-pointer"
-                >
-                  Select
-                </button>
-
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45"></div>
-              </div>
-            )}
-          </section>
-        ) : loadingNextCenterNews ? (
-          <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
-            <Loader2 className="animate-spin size-5" />
-          </div>
-        ) : (
-          <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
-            No news selected
-          </div>
-        )} */}
 
         {/* filters */}
         <aside
@@ -1227,22 +1167,24 @@ export default function ArticleReview({
               )}
 
               <div className="flex flex-col gap-3 justify-between mb-4">
-                <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
-                  Notes
-                </h3>
                 {notes?.length === 0 ? (
                   <p className="text-neutral-500 text-sm text-center">-</p>
                 ) : (
-                  <ul className="space-y-2">
-                    {notes.map((note, i) => (
-                      <li
-                        key={i}
-                        className="p-3 rounded-md border bg-neutral-50 text-xs text-neutral-800"
-                      >
-                        {note}
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
+                      Notes
+                    </h3>
+                    <ul className="space-y-2">
+                      {notes.map((note, i) => (
+                        <li
+                          key={i}
+                          className="p-3 rounded-md border bg-neutral-50 text-xs text-neutral-800"
+                        >
+                          {note}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
                 )}
                 {/* <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" /> */}
               </div>
@@ -1301,6 +1243,12 @@ export default function ArticleReview({
             }}
           />
         )}
+
+        {isShowingSelectedNews && (
+          <div className="absolute bottom-8 right-1/2 left-1/2 ml-56">
+            <Button variant="outline" className="drop-shadow-2xl rounded-full cursor-pointer" size="md" onClick={handleContinueClicked}>Continue</Button>
+          </div>
+        )}
       </div>
 
       {/* Add company dialog */}
@@ -1315,7 +1263,7 @@ export default function ArticleReview({
       />
 
       {/* cleaning feedback modal */}
-      {trainingPageType === "cleaning" && (
+      {(trainingPageType === "cleaning" && centerArticle) && (
         <CleaningFeedBackModal
           addingFeedbackStates={addingFeedbackStates}
           onlike={() => handleCleaningFeedback("like")}

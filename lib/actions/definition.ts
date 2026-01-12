@@ -98,6 +98,7 @@ export async function addNewTarget(data: {
   trainingType: string;
   value: string;
   userId: number;
+  sourceId:string;
 }): Promise<TargetItem> {
   try {
     const session = await getServerSession(authOptions);
@@ -110,7 +111,7 @@ export async function addNewTarget(data: {
     });
     if (!user) throw new Error("User not found");
 
-    const targetName = `target:training-${data.trainingType};user:${data.userId}`;
+    const targetName = `target:training-${data.trainingType};user:${data.userId};sourceid:${data.sourceId}`;
 
     const newTarget = await prisma.definition.create({
       data: {
@@ -120,7 +121,11 @@ export async function addNewTarget(data: {
       },
     });
 
+    const source = await prisma.news_source.findUnique({where:{id:parseInt(data?.sourceId)}})
+
     return {
+      sourceId:source?.id.toString() as string,
+      sourceName:source?.name as string,
       id: newTarget.id,
       trainingType: data.trainingType,
       value: newTarget.value as string,
@@ -137,6 +142,7 @@ export async function editTarget(data: {
   value: string;
   id: number;
   userId: number;
+  sourceId:string;
 }): Promise<TargetItem> {
   try {
     const session = await getServerSession(authOptions);
@@ -149,7 +155,7 @@ export async function editTarget(data: {
     });
     if (!user) throw new Error("User not found");
 
-    const targetName = `target:training-${data.trainingType};user:${data.userId}`;
+    const targetName = `target:training-${data.trainingType};user:${data.userId};sourceid:${data.sourceId}`;
 
     const updatedTarget = await prisma.definition.update({
       where: {
@@ -161,8 +167,12 @@ export async function editTarget(data: {
       },
     });
 
+    const source = await prisma.news_source.findUnique({where:{id:parseInt(data?.sourceId)}})
+
     return {
       id: updatedTarget.id,
+      sourceId:source?.id.toString() as string,
+      sourceName:source?.name as string,
       trainingType: data.trainingType,
       value: updatedTarget.value as string,
       user: user.name,
