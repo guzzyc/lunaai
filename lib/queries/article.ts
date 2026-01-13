@@ -141,6 +141,7 @@ export async function getArticles(
       news_id: { not: null },
       news: {
         news_source_id: sourceId,
+        invalid:0
       },
       ...(trainingType === "classifying" ? { category: { not: null } } : {}),
     },
@@ -301,6 +302,7 @@ export async function getNextCenterNews() {
     _max: { id: true },
     where: {
       news_source_id: sourceId,
+      invalid:0
     },
   });
 
@@ -379,7 +381,8 @@ export async function getNextClassifyingNews() {
       category: null,
       user_id: userId,
       news:{
-        news_source_id:sourceId
+        news_source_id:sourceId,
+        invalid:0
       }
     },
     include: { news: true },

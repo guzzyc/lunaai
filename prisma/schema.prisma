@@ -82,6 +82,7 @@ model news {
   time_stamp     DateTime?      @db.DateTime(0)
   author         String?        @db.VarChar(255)
   header         String?        @db.Text
+  invalid        Int?           @default(0)
   company_news   company_news[]
   news_source    news_source?   @relation(fields: [news_source_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_ibfk_1")
   training       training[]
