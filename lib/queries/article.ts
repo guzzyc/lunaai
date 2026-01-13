@@ -378,6 +378,9 @@ export async function getNextClassifyingNews() {
       },
       category: null,
       user_id: userId,
+      news:{
+        news_source_id:sourceId
+      }
     },
     include: { news: true },
   });
