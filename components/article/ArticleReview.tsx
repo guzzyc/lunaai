@@ -207,7 +207,13 @@ export default function ArticleReview({
       }
       const cleanedContent =
         centerArticle?.content?.replace(/<[^>]+>/g, "") ?? "";
-      if (cleanedContent.length < 550) {
+
+      const cleanedWordCount = cleanedContent
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean).length;
+
+      if (cleanedWordCount < 550) {
         setSelectionRect(null);
         return;
       }
@@ -488,7 +494,10 @@ export default function ArticleReview({
   const handleApplyFilters = async () => {
     const cleanedContent =
       centerArticle?.content?.replace(/<[^>]+>/g, "") ?? "";
-    if ((!selectedRange || !allowNext) && cleanedContent.length > 550) {
+
+    const wordCount = cleanedContent.trim().split(/\s+/).filter(Boolean).length;
+
+    if ((!selectedRange || !allowNext) && wordCount > 550) {
       toast.info("Please make text selection from the news", {
         richColors: true,
       });
@@ -1246,7 +1255,14 @@ export default function ArticleReview({
 
         {isShowingSelectedNews && (
           <div className="absolute bottom-8 right-1/2 left-1/2 ml-56">
-            <Button variant="outline" className="drop-shadow-2xl rounded-full cursor-pointer" size="md" onClick={handleContinueClicked}>Continue</Button>
+            <Button
+              variant="outline"
+              className="drop-shadow-2xl rounded-full cursor-pointer"
+              size="md"
+              onClick={handleContinueClicked}
+            >
+              Continue
+            </Button>
           </div>
         )}
       </div>
@@ -1263,7 +1279,7 @@ export default function ArticleReview({
       />
 
       {/* cleaning feedback modal */}
-      {(trainingPageType === "cleaning" && centerArticle) && (
+      {trainingPageType === "cleaning" && centerArticle && (
         <CleaningFeedBackModal
           addingFeedbackStates={addingFeedbackStates}
           onlike={() => handleCleaningFeedback("like")}
