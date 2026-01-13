@@ -976,7 +976,7 @@ export default function ArticleReview({
           </div>
         ) : (
           <div className="flex-1 bg-bg-main overflow-y-auto relative flex justify-center scroll-smooth scrollbar-custom items-center text-subtitle-dark">
-            No new news available
+            No clean news
           </div>
         )}
 
