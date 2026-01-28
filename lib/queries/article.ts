@@ -367,12 +367,16 @@ export async function getNextCenterNews() {
     },
   });
 
-  //fill the bad news log
+  if (!randomNews) {
+    return null;
+  }
+
+  // //fill the bad news log
   await prisma.news_bad_log.create({
     data:{
       user_id:userId,
-      news_id:randomNews?.id,
-      show_date:Date.now().toLocaleString(),
+      news_id:randomNews.id,
+      show_date:new Date(),
     }
   })
 
