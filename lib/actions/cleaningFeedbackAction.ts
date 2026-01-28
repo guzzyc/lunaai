@@ -41,6 +41,14 @@ export async function insertCleaningFeedback(
       },
     });
   }
+
+  //delete from bad news list
+  await prisma.news_bad_log.deleteMany({
+    where:{
+      news_id:newsId,
+      user_id:userId
+    }
+  })
 }
 
 export async function saveFeedback(content: string, newsId: number) {
