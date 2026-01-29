@@ -21,16 +21,22 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
 import { definition as Definition } from "@/app/generated/prisma/client";
-import { createCompany, deleteCompany, editCompany } from "@/lib/actions/createCompanyAction";
+import {
+  createCompany,
+  deleteCompany,
+  editCompany,
+} from "@/lib/actions/createCompanyAction";
 import { toast } from "sonner";
 import { ArticlesArrayType, CompanyType } from "@/lib/types/news-types";
 import { FileUploader } from "../FileUploader";
 import {
   createDocumentPlaceholder,
+  deleteDocument,
   deleteDocumentPlaceholder,
   getDocumentUploadUrl,
   linkDocumentToCompany,
 } from "@/lib/actions/document";
+import { getCompanyDocuments } from "@/lib/queries/document";
 
 interface CompanyData {
   name: string;
@@ -41,6 +47,12 @@ interface CompanyData {
   resourceUrls: string[];
   tags: string[];
 }
+
+export type ExistingDocument = {
+  id: number;
+  name: string | null;
+  url?: string;
+};
 
 interface CompanyModalProps {
   open: boolean;
@@ -80,30 +92,15 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
   const [isSavingCompany, setSavingCompany] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [existingDocuments, setExistingDocuments] = useState<
+    ExistingDocument[]
+  >([]);
+  const [removedDocumentIds, setRemovedDocumentIds] = useState<number[]>([]);
+
   const tagMenuRef = useRef<HTMLDivElement>(null);
 
   const isEditMode = !!editingCompany;
 
-  // useEffect(() => {
-  //   const handleEsc = (event: KeyboardEvent) => {
-  //     if (event.key === "Escape") onClose();
-  //   };
-  //   const handleClickOutside = (event: MouseEvent) => {
-  //     if (
-  //       tagMenuRef.current &&
-  //       !tagMenuRef.current.contains(event.target as Node)
-  //     ) {
-  //       setIsTagMenuOpen(false);
-  //     }
-  //   };
-
-  //   window.addEventListener("keydown", handleEsc);
-  //   document.addEventListener("mousedown", handleClickOutside);
-  //   return () => {
-  //     window.removeEventListener("keydown", handleEsc);
-  //     document.removeEventListener("mousedown", handleClickOutside);
-  //   };
-  // }, [onClose]);
 
   useEffect(() => {
     if (
@@ -145,8 +142,34 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
           : [activeNewsUrl || ""],
         tags: validTagIds,
       });
+      //setUploadedFiles()
 
       setErrors({});
+    }
+  }, [open, editingCompany]);
+
+  useEffect(() => {
+    if (open && editingCompany?.id) {
+      (async () => {
+        async function loadExistingFiles() {
+          const res = await fetch(
+            `/api/companies/${editingCompany?.id.toString()}/documents`,
+          );
+          const docs = await res.json();
+
+          const existing: ExistingDocument[] = docs.map((d: any) => ({
+            id: d.id.toString(),
+            name: d.name,
+            url: d.url,
+          }));
+
+          setExistingDocuments(existing);
+          setRemovedDocumentIds([]);
+          setUploadedFiles([]);
+        }
+
+        loadExistingFiles();
+      })();
     }
   }, [open, editingCompany]);
 
@@ -257,6 +280,33 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
     }));
   };
 
+  const handleUploadToAzure = async (companyId:number) => {
+    for (const file of uploadedFiles) {
+      // create document row
+      const documentId = await createDocumentPlaceholder(file.name);
+
+      //get SAS URL
+      const sasUrl = await getDocumentUploadUrl(documentId, file.type);
+
+      try {
+        //upload directly to Azure
+        await fetch(sasUrl, {
+          method: "PUT",
+          headers: {
+            "x-ms-blob-type": "BlockBlob",
+            "Content-Type": file.type,
+          },
+          body: file,
+        });
+        // link to company
+        await linkDocumentToCompany(companyId, documentId);
+      } catch (error) {
+        await deleteDocumentPlaceholder(documentId);
+        throw new Error("File upload failed");
+      }
+    }
+  };
+
   const handleSave = async () => {
     if (!validateForm()) {
       toast.error("Please fix the errors before saving.", { richColors: true });
@@ -268,38 +318,25 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
     try {
       if (isEditMode && editingCompany?.id) {
         const updatedCompany = await editCompany(formData, editingCompany.id);
-        toast.success("Company updated successfully", { richColors: true });
-        onEdit && onEdit(updatedCompany);
+
+        try {
+          // delete removed docs
+          for (const docId of removedDocumentIds) {
+            await deleteDocument(docId);
+          }
+
+          await handleUploadToAzure(updatedCompany.id)
+
+          toast.success("Company updated successfully", { richColors: true });
+          onEdit?.(updatedCompany);
+        } catch (error) {
+          throw error
+        }
       } else {
         const addedCompany = await createCompany(formData);
 
         try {
-          //upload added files
-          for (const file of uploadedFiles) {
-            // a) create document row
-            const documentId = await createDocumentPlaceholder(file.name);
-
-            // b) get SAS URL
-            const sasUrl = await getDocumentUploadUrl(documentId, file.type);
-
-            try {
-              // c) upload directly to Azure
-              await fetch(sasUrl, {
-                method: "PUT",
-                headers: {
-                  "x-ms-blob-type": "BlockBlob",
-                  "Content-Type": file.type,
-                },
-                body: file,
-              });
-              // d) link to company
-              await linkDocumentToCompany(addedCompany.id, documentId);
-            } catch (error) {
-              await deleteDocumentPlaceholder(documentId);
-              throw new Error("File upload failed");
-            }
-          }
-
+          await handleUploadToAzure(addedCompany.id)
           toast.success("Company created successfully", { richColors: true });
           onAdd && onAdd(addedCompany);
         } catch (error) {
@@ -309,7 +346,7 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
       }
 
       onClose();
-    } catch (err:any) {
+    } catch (err: any) {
       toast.error(
         isEditMode
           ? `Failed to update company, please fix the errors before saving: ${err.message}`
@@ -633,7 +670,13 @@ const AddCompanyModal: React.FC<CompanyModalProps> = ({
               onUploadComplete={(files) => {
                 setTimeout(() => setUploadedFiles(files), 0);
               }}
+              onDelete={(id)=>{
+                setRemovedDocumentIds(prev=>[...prev,id]);
+                setExistingDocuments(prev => prev.filter(doc => doc.id !== id));
+              }}
               className="mt-1"
+              existingFiles={existingDocuments}
+              isEditMode={isEditMode}
             />
           </div>
         </div>

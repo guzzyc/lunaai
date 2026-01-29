@@ -354,6 +354,7 @@ export async function getNextCenterNews() {
     where: {
       id: { gte: randomId },
       news_source_id: sourceId,
+      invalid:0,
       NOT: {
         news_training: {
           some: { user_id: userId },
@@ -366,6 +367,19 @@ export async function getNextCenterNews() {
       news_source: true,
     },
   });
+
+  if (!randomNews) {
+    return null;
+  }
+
+  //fill the bad news log
+  await prisma.news_bad_log.create({
+    data:{
+      user_id:userId,
+      news_id:randomNews.id,
+      show_date:new Date(),
+    }
+  })
 
   return randomNews;
 }
