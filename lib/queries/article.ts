@@ -354,6 +354,7 @@ export async function getNextCenterNews() {
     where: {
       id: { gte: randomId },
       news_source_id: sourceId,
+      invalid:0,
       NOT: {
         news_training: {
           some: { user_id: userId },
@@ -371,7 +372,7 @@ export async function getNextCenterNews() {
     return null;
   }
 
-  // //fill the bad news log
+  //fill the bad news log
   await prisma.news_bad_log.create({
     data:{
       user_id:userId,
