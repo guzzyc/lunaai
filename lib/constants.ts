@@ -5,6 +5,7 @@ export const TABS = [
   { name: "Users", count: 12, value: "Users" },
   { name: "Categories", value: "Category" },
   { name: "Industries", value: "Industry" },
+  { name: "Countries", value: "Country" },
   { name: "Task types", value: "TaskType" },
   { name: "Tags", value: "Tag" },
   { name: "Target", value: "Target" },

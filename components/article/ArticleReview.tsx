@@ -45,6 +45,7 @@ interface ArticleReviewProps {
   articles: ArticlesArrayType;
   categories?: Definition[];
   industries?: Definition[];
+  countries?: Definition[];
   origins: Definition[];
   statuses: Definition[];
   tags: Definition[];
@@ -58,6 +59,7 @@ export default function ArticleReview({
   articles,
   categories,
   industries,
+  countries,
   origins,
   statuses,
   tags,
@@ -669,6 +671,7 @@ export default function ArticleReview({
 
     const categoryIds = new Set(categories?.map((c) => String(c.id)) ?? []);
     const industryIds = new Set(industries?.map((i) => String(i.id)) ?? []);
+    const countryIds = new Set(countries?.map((i) => String(i.id)) ?? []);
 
     categoryString.split(",").forEach((id) => {
       const cleanId = id.trim();
@@ -678,6 +681,8 @@ export default function ArticleReview({
         hydrated[`Category-${cleanId}`] = true;
       } else if (industryIds.has(cleanId)) {
         hydrated[`Industry-${cleanId}`] = true;
+      } else if (countryIds.has(cleanId)) {
+        hydrated[`Country-${cleanId}`] = true;
       } else {
         console.warn("Unknown training id:", cleanId);
       }
@@ -1122,6 +1127,57 @@ export default function ArticleReview({
           >
             {trainingPageType === "classifying" && centerArticle && (
               <div className="space-y-6">
+                <div className="px-4 border-b-2 border-border-dark pb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
+                      Country
+                    </h3>
+                    {/* <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" /> */}
+                  </div>
+                  <div className="space-y-3">
+                    {countries?.map((option, i) => (
+                      <label
+                        key={i}
+                        className="flex items-center gap-3 cursor-pointer group select-none"
+                      >
+                        <div
+                          className={`
+                          w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-all duration-200
+                          ${
+                            checkedFilters[`Country-${option.id}`]
+                              ? "bg-checkbox-bg"
+                              : "border-gray-300 group-hover:border-blue-400"
+                          }
+                        `}
+                        >
+                          {checkedFilters[`Country-${option.id}`] && (
+                            <Check
+                              className="w-3.5 h-3.5 text-white"
+                              strokeWidth={3}
+                            />
+                          )}
+                          <input
+                            type="checkbox"
+                            className="hidden"
+                            onChange={() =>
+                              toggleFilter(`Country-${option.id}`)
+                            }
+                            checked={!!checkedFilters[`Country-${option.id}`]}
+                          />
+                        </div>
+                        <span
+                          className={`text-sm transition-colors ${
+                            checkedFilters[`Country-${option.id}`]
+                              ? "text-subtitle-dark font-medium"
+                              : "text-neutral-600 group-hover:text-subtitle-dark"
+                          }`}
+                        >
+                          {option.value}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <div className="px-4 border-b-2 border-border-dark pb-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">

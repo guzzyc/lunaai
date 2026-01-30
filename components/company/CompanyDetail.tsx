@@ -119,20 +119,28 @@ const CompanyDetail = ({
           <div className="flex items-center gap-3 p-3 bg-bg-main rounded-lg border border-blue-50 h-11">
             <div className="w-fit flex items-center gap-3">
               <div className="flex items-center gap-3">
-                <LinkIcon className="w-4 h-4 text-link" />
-                <Link
-                  href={activeCompany?.website || ""}
-                  className="text-sm font-medium text-link hover:underline flex-1 truncate"
-                >
-                  {activeCompany?.website || "https://www.bloombergfinance.com"}
-                </Link>
+                {activeCompany?.website ? (
+                  <>
+                    <LinkIcon className="w-4 h-4 text-link" />
+                    <Link
+                      href={activeCompany?.website}
+                      className="text-sm font-medium text-link hover:underline flex-1 truncate"
+                    >
+                      {activeCompany?.website}
+                    </Link>
+                  </>
+                ) : (
+                  <span className="text-sm text-subtitle-dark opacity-90">
+                    Website not entered
+                  </span>
+                )}
               </div>
-              <Link
+              {/* <Link
                 href={activeCompany?.website || ""}
                 className="bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-blue-100 cursor-pointer"
               >
                 Go web
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>
@@ -277,7 +285,9 @@ const CompanyDetail = ({
                         {news?.published_date ? (
                           formatDate(news?.published_date)
                         ) : (
-                          <span className="text-neutral-400 textsm">Not found</span>
+                          <span className="text-neutral-400 textsm">
+                            Not found
+                          </span>
                         )}
                       </td>
                       <td className="px-6 py-3">

@@ -54,6 +54,7 @@ export default async function TrainingsPage({
       articles={articles ?? []}
       categories={filters.categories}
       industries={filters.industries}
+      countries={filters.countries}
       origins={origins.origins}
       statuses={statuses.statuses}
       tags={tags.tags}
