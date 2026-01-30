@@ -201,10 +201,14 @@ export async function getFilters() {
   const industries = await prisma.definition.findMany({
     where: { name: "Industry" },
   });
+  const countries = await prisma.definition.findMany({
+    where: { name: "Country" },
+  });
 
   return {
     categories,
     industries,
+    countries
   };
 }
 
