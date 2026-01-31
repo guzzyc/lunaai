@@ -4,6 +4,16 @@ import { authOptions } from "../auth";
 import { definition as Definition } from "@/app/generated/prisma/client";
 import { getNextActiveSource } from "./user";
 
+// export type SearchNewsParams = {
+//   sourceId?: number;
+//   fromDate?: Date;
+//   toDate?: Date;
+//   industryId?: number;
+//   categoryId?: number;
+//   companyId?: number;
+//   page?: number; 
+// };
+
 // export async function getArticles(
 //   trainingType: "classifying" | "cleaning" = "cleaning"
 // ) {
@@ -433,6 +443,9 @@ export async function getNextClassifyingNews() {
         is: {
           news_source_id: sourceId,
           invalid: 0,
+          for_classifying: {
+            equals: 1,
+          },
         },
       },
     },
@@ -462,3 +475,115 @@ export async function getNextClassifyingNews() {
 
   return nextNews;
 }
+
+  // export async function searchNews(
+  //   params: SearchNewsParams = {}
+  // ) {
+  //   const session = await getServerSession(authOptions);
+  //   if (!session?.user?.id) throw new Error("Unauthorized");
+
+  //   const userId = session.user.id;
+
+  //   const pageSize = 10;
+  //   const page = params.page ?? 1;
+  //   const skip = (page - 1) * pageSize;
+
+  //   // -----------------------------
+  //   // news-level filters
+  //   // -----------------------------
+  //   const newsWhere: any = {
+  //     invalid: 0,
+
+  //     ...(params.sourceId && {
+  //       news_source_id: params.sourceId,
+  //     }),
+
+  //     ...(params.fromDate || params.toDate
+  //       ? {
+  //           publish_date: {
+  //             ...(params.fromDate && { gte: params.fromDate }),
+  //             ...(params.toDate && { lte: params.toDate }),
+  //           },
+  //         }
+  //       : {}),
+
+  //     ...(params.industryId && {
+  //       industry_id: params.industryId,
+  //     }),
+
+  //     ...(params.companyId && {
+  //       company_news: {
+  //         some: {
+  //           company_id: params.companyId,
+  //         },
+  //       },
+  //     }),
+  //   };
+
+  //   // -----------------------------
+  //   // training-level filters
+  //   // -----------------------------
+  //   const trainingWhere: any = {
+  //     user_id: userId,
+  //     news_id: { not: null },
+
+  //     ...(trainingType === "classifying"
+  //       ? { category: { not: null } }
+  //       : {}),
+
+  //     ...(params.categoryId && {
+  //       category: params.categoryId,
+  //     }),
+  //   };
+
+  //   const rows = await prisma.news_training.findMany({
+  //     where: {
+  //       ...trainingWhere,
+  //       news: {
+  //         is: newsWhere,
+  //       },
+  //     },
+  //     orderBy: { id: "desc" },
+  //     take: pageSize,
+  //     skip,
+  //     include: {
+  //       news: {
+  //         include: {
+  //           news_source: true,
+  //           company_news: {
+  //             include: { company: true },
+  //           },
+  //           news_training: {
+  //             where: { user_id: userId },
+  //             select: {
+  //               id: true,
+  //               category: true,
+  //               like: true,
+  //               feedback: true,
+  //             },
+  //           },
+  //         },
+  //       },
+  //     },
+  //   });
+
+  //   // -----------------------------
+  //   // de-duplicate news
+  //   // -----------------------------
+  //   const seen = new Set<number>();
+  //   const data = rows
+  //     .map((r) => r.news)
+  //     .filter((n): n is NonNullable<typeof n> => n !== null)
+  //     .filter((n) => {
+  //       if (seen.has(n.id)) return false;
+  //       seen.add(n.id);
+  //       return true;
+  //     });
+
+  //   return {
+  //     page,
+  //     pageSize,
+  //     count: data.length,
+  //     data,
+  //   };
+  // }

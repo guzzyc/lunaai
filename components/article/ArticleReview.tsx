@@ -788,8 +788,9 @@ export default function ArticleReview({
 
     const hasCategory = entries.some(([key]) => key.startsWith("Category-"));
     const hasIndustry = entries.some(([key]) => key.startsWith("Industry-"));
+    const hasCountry = entries.some(([key]) => key.startsWith("Country-"));
 
-    return hasCategory && hasIndustry;
+    return hasCategory && hasIndustry && hasCountry;
   })();
 
   return (
