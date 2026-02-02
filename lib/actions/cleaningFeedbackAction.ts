@@ -69,7 +69,8 @@ export async function saveFeedback(content: string, newsId: number) {
     return prisma.news_training.update({
       where: { id: existing.id },
       data: {
-        feedback: content
+        feedback: content,
+        time_stamp: new Date(),
       },
     });
   }

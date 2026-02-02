@@ -40,6 +40,13 @@ import {
 import { WeeklyTargetProgress } from "@/lib/queries/user";
 import { tr } from "zod/v4/locales";
 import { Input } from "../ui/input";
+import { useSession } from "next-auth/react";
+
+export type NoteType = {
+  user: string;
+  date: Date | null;
+  content: string;
+};
 
 interface ArticleReviewProps {
   articles: ArticlesArrayType;
@@ -51,7 +58,7 @@ interface ArticleReviewProps {
   tags: Definition[];
   leftWidth: Definition;
   rightWidth: Definition;
-  feedbacks: string[];
+  feedbacks: NoteType[];
   weeklyTargetProgress: WeeklyTargetProgress;
 }
 
@@ -71,13 +78,14 @@ export default function ArticleReview({
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-
+  
   // const [activeArticleId, setActiveArticleId] = useState<number>(
-  //   articles[0]?.id
-  // );
-  // const activeArticleId =
-  //   Number(searchParams.get("activeNews")) || articles[0]?.id;
-
+    //   articles[0]?.id
+    // );
+    // const activeArticleId =
+    //   Number(searchParams.get("activeNews")) || articles[0]?.id;
+    
+  const { data: session, status } = useSession();
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
   const [selectedText, setSelectedText] = useState<string>("");
   const [selectedWordCount, setSelectedWordCount] = useState<number>();
@@ -98,7 +106,7 @@ export default function ArticleReview({
     "classifying" | "cleaning"
   >(initialType);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [notes, setNotes] = useState<string[]>(feedbacks ?? []);
+  const [notes, setNotes] = useState<NoteType[]>(feedbacks ?? []);
   // const [addingCleaningFeedback, setAddingCleaningFeedback] = useState(false);
   const [addingFeedbackStates, setAddingFeedbackStates] = useState<
     Record<"dislike" | "notsure" | "like", boolean>
@@ -133,9 +141,8 @@ export default function ArticleReview({
   const [centerArticle, setCenterArticle] = useState<
     ArticleType | TrainedArticleType | null
   >(null);
-  const [tempCenterArticle, setTempCenterArticle] = useState<
-    ArticleType | null
-  >(null);
+  const [tempCenterArticle, setTempCenterArticle] =
+    useState<ArticleType | null>(null);
   const [trainedCenterArticle, setTrainedCenterArticle] =
     useState<TrainedArticleType | null>(null);
 
@@ -152,9 +159,11 @@ export default function ArticleReview({
   const [hasMore, setHasMore] = useState(true);
   const trainingIdMap = useRef<Map<number, number>>(new Map());
 
-  const formattedActiveArticleContent = 
-    (centerArticle?.rich_content ?? centerArticle?.content ?? "")
-      .replace(/\\n/g, "\n");
+  const formattedActiveArticleContent = (
+    centerArticle?.rich_content ??
+    centerArticle?.content ??
+    ""
+  ).replace(/\\n/g, "\n");
 
   useEffect(() => {
     const currentType = searchParams.get("type") ?? "cleanining";
@@ -194,7 +203,7 @@ export default function ArticleReview({
         const nextNews = await fetchNextCenterNews(trainingPageType);
         console.log("nexxxxxxx", nextNews);
         setCenterArticle(nextNews);
-        setTempCenterArticle(nextNews)
+        setTempCenterArticle(nextNews);
       } catch (error) {
         console.error("Fetch error:", error);
       } finally {
@@ -213,7 +222,7 @@ export default function ArticleReview({
         setSelectedRange(selection?.getRangeAt(0));
       }
 
-      // ensure selection is within our content area
+      // ensure selection is within content area
       if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
         setSelectionRect(null);
         setSelectedText("");
@@ -296,17 +305,16 @@ export default function ArticleReview({
   ).length;
 
   const toggleFilter = (option: string) => {
-    const [type] = option.split("-"); // "Category" or "Industry"
+    const [type] = option.split("-");
 
     setCheckedFilters((prev) => {
       const isCurrentlyChecked = !!prev[option];
 
-      // count current selections of this type
       const currentCount = Object.entries(prev).filter(
         ([key, v]) => v && key.startsWith(type + "-"),
       ).length;
 
-      // if trying to ADD and already 2 selected → block
+      // enforce max of 2 selections
       if (!isCurrentlyChecked && currentCount >= 2) {
         toast.info(
           `You can select at most 2 ${type.toLowerCase().replace("y", "i")}es`,
@@ -315,7 +323,7 @@ export default function ArticleReview({
             richColors: true,
           },
         );
-        return prev; // do nothing
+        return prev;
       }
 
       return {
@@ -533,7 +541,7 @@ export default function ArticleReview({
         return;
       }
       setCenterArticle(nextNews);
-      setTempCenterArticle(nextNews)
+      setTempCenterArticle(nextNews);
       handleSetActiveNews(nextNews.id);
       scrollFiltersToTop();
       scrollContentsToTop();
@@ -651,10 +659,9 @@ export default function ArticleReview({
   // }, [articles, searchParams, pathname, router]);
 
   useEffect(() => {
-    
-    console.log("temppppppp",tempCenterArticle)
+    console.log("temppppppp", tempCenterArticle);
   }, [tempCenterArticle]);
-  
+
   useEffect(() => {
     if (trainingPageType !== "classifying") return;
 
@@ -764,7 +771,7 @@ export default function ArticleReview({
     if (!tempCenterArticle) {
       setCenterArticle(null);
       setShowingSelectedNews(false);
-      removeActiveNewsUrl()
+      removeActiveNewsUrl();
       return;
     }
 
@@ -774,14 +781,14 @@ export default function ArticleReview({
     scrollContentsToTop();
     scrollNewsListToTop();
     setShowingSelectedNews(false);
-    removeActiveNewsUrl()
+    removeActiveNewsUrl();
   };
 
-  const removeActiveNewsUrl = ()=>{
+  const removeActiveNewsUrl = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("activeNews");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }
+  };
 
   const hasAtLeastOneCategoryAndIndustry = (() => {
     const entries = Object.entries(checkedFilters).filter(([, v]) => v);
@@ -789,8 +796,10 @@ export default function ArticleReview({
     const hasCategory = entries.some(([key]) => key.startsWith("Category-"));
     const hasIndustry = entries.some(([key]) => key.startsWith("Industry-"));
     const hasCountry = entries.some(([key]) => key.startsWith("Country-"));
+    const hasOtherIndustry =
+      isOtherIndustryChecked && otherIndustryInput.trim().length > 0;
 
-    return hasCategory && hasIndustry && hasCountry;
+    return hasCategory && hasCountry && (hasIndustry || hasOtherIndustry);
   })();
 
   return (
@@ -1364,7 +1373,13 @@ export default function ArticleReview({
                           key={i}
                           className="p-3 rounded-md border bg-neutral-50 text-xs text-neutral-800"
                         >
-                          {note}
+                          <div className="flexi items-center mb-1">
+                            <span className="text-subtitle-dark/80 font-medium text-xs">
+                              {formatDate(note.date) ?? "Unknown date"} -
+                            </span>
+                            <span className="font-medium text-subtitle-dark/80"> {note.user}</span>
+                          </div>
+                          {note.content}
                         </li>
                       ))}
                     </ul>
@@ -1423,7 +1438,10 @@ export default function ArticleReview({
             pageType={trainingPageType}
             newsId={centerArticle?.id as number}
             onAddFeedback={(content) => {
-              setNotes((prev) => [...prev, content]);
+              setNotes((prev) => [
+                ...prev,
+                { user: session?.user.name ?? "Current User", date: new Date(), content },
+              ]);
             }}
           />
         )}
