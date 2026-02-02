@@ -190,7 +190,19 @@ export default function ArticleReview({
 
   useEffect(() => {
     setNotes(feedbacks ?? []);
-  }, [centerArticle?.id, feedbacks]);
+  }, [centerArticle, feedbacks]);
+
+  useEffect(() => {
+    if (!centerArticle?.id) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+
+    // remove a stale activeNews
+    if (params.has("activeNews")) {
+      params.delete("activeNews");
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [centerArticle?.id]);
 
   useEffect(() => {
     setArticlesList(articles);
