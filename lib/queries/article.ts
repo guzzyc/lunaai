@@ -349,9 +349,9 @@ export async function getNextClassifyingNews() {
         is: {
           news_source_id: sourceId,
           invalid: 0,
-          // for_classifying: {
-          //   equals: 1,
-          // },
+          for_classifying: {
+            equals: 1,
+          },
         },
       },
     },
