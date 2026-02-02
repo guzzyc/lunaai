@@ -190,7 +190,7 @@ export default function ArticleReview({
 
   useEffect(() => {
     setNotes(feedbacks ?? []);
-  }, [feedbacks]);
+  }, [centerArticle?.id, feedbacks]);
 
   useEffect(() => {
     setArticlesList(articles);
