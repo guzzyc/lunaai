@@ -29,10 +29,6 @@ export default async function TrainingsPage({
   const activeNewsId = resolvedSearchParams.activeNews
     ? Number(resolvedSearchParams.activeNews)
     : null;
-
-  const trainedActiveNewsId = resolvedSearchParams.trainedActiveNews
-    ? Number(resolvedSearchParams.trainedActiveNews)
-    : null;
   
   const nextActiveSource = await getNextActiveSource(trainingType)
 
@@ -54,12 +50,12 @@ export default async function TrainingsPage({
       articles={articles ?? []}
       categories={filters.categories}
       industries={filters.industries}
+      countries={filters.countries}
       origins={origins.origins}
       statuses={statuses.statuses}
       tags={tags.tags}
       leftWidth={initialWidth.leftWidth}
       rightWidth={initialWidth.rightWidth}
-      feedbacks={feedbacks}
       weeklyTargetProgress={weeklyTargetProgress}
     />
   );

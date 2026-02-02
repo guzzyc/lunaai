@@ -19,6 +19,11 @@ export type CompanyNewsItem = {
   header: string | null;
   portal: string | null;
 };
+export type NewsSearchItem = {
+  source:NewsSourceType;
+  date:Date;
+  title:string
+}
 
 export type ArticlesArrayType = Awaited<ReturnType<typeof getArticles>>;
 export type TrainedArticleType = ArticlesArrayType extends (infer T)[] ? T : never;

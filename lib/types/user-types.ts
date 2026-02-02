@@ -24,4 +24,4 @@ export interface TargetItem {
   value:string
 }
 
-export type TabType = 'Users' | 'Category' | 'Industry' | 'TaskType' | 'Tag' | 'Target';
+export type TabType = 'Users' | 'Category' | 'Industry' | 'TaskType' | 'Tag' | 'Target' | 'Country';

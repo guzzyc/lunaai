@@ -22,6 +22,7 @@ interface SettingsPageProps {
   initialUsers: User[];
   initialCategories: DefinitionItem[];
   initialIndustries: DefinitionItem[];
+  initialCountries: DefinitionItem[];
   initialTags: DefinitionItem[];
   initialTaskTypes: DefinitionItem[];
   initialTargets: TargetItem[];
@@ -32,6 +33,7 @@ export default function SettingsPage({
   initialUsers,
   initialCategories,
   initialIndustries,
+  initialCountries,
   initialTags,
   initialTaskTypes,
   initialTargets,
@@ -43,6 +45,8 @@ export default function SettingsPage({
     useState<DefinitionItem[]>(initialCategories);
   const [industries, setIndustries] =
     useState<DefinitionItem[]>(initialIndustries);
+  const [countries, setCountries] =
+    useState<DefinitionItem[]>(initialCountries);
   const [taskTypes, setTaskTypes] = useState<DefinitionItem[]>(initialTaskTypes);
   const [tags, setTags] = useState<DefinitionItem[]>(initialTags);
   const [targets, setTargets] = useState<TargetItem[]>(initialTargets);
@@ -111,6 +115,11 @@ export default function SettingsPage({
         ...prev,
         { ...(data as DefinitionItem), id: data.id! },
       ]);
+    } else if (activeTab === "Country") {
+      setCountries((prev) => [
+        ...prev,
+        { ...(data as DefinitionItem), id: data.id! },
+      ]);
     } else if (activeTab === "TaskType") {
       setTaskTypes((prev) => [
         ...prev,
@@ -164,6 +173,13 @@ export default function SettingsPage({
           )
         );
         break;
+      case "Country":
+        setCountries((prev) =>
+          prev.map((item) =>
+            item.id === data.id ? (data as DefinitionItem) : item
+          )
+        );
+        break;
       case "TaskType":
         setTaskTypes((prev) =>
           prev.map((item) =>
@@ -199,6 +215,8 @@ export default function SettingsPage({
       setCategories((prev) => prev.filter((c) => c.id !== id));
     } else if (activeTab === "Industry") {
       setIndustries((prev) => prev.filter((u) => u.id !== id));
+    } else if (activeTab === "Country") {
+      setCountries((prev) => prev.filter((u) => u.id !== id));
     } else if (activeTab === "TaskType") {
       setTaskTypes((prev) => prev.filter((u) => u.id !== id));
     } else if (activeTab === "Tag") {
@@ -218,6 +236,9 @@ export default function SettingsPage({
       break;
     case "Industry":
       currentList = industries;
+      break;
+    case "Country":
+      currentList = countries;
       break;
     case "TaskType":
       currentList = taskTypes;

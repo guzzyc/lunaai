@@ -40,17 +40,25 @@ import {
 import { WeeklyTargetProgress } from "@/lib/queries/user";
 import { tr } from "zod/v4/locales";
 import { Input } from "../ui/input";
+import { useSession } from "next-auth/react";
+
+export type NoteType = {
+  user: string;
+  date: Date | null;
+  content: string;
+};
 
 interface ArticleReviewProps {
   articles: ArticlesArrayType;
   categories?: Definition[];
   industries?: Definition[];
+  countries?: Definition[];
   origins: Definition[];
   statuses: Definition[];
   tags: Definition[];
   leftWidth: Definition;
   rightWidth: Definition;
-  feedbacks: string[];
+  // feedbacks: NoteType[];
   weeklyTargetProgress: WeeklyTargetProgress;
 }
 
@@ -58,12 +66,13 @@ export default function ArticleReview({
   articles,
   categories,
   industries,
+  countries,
   origins,
   statuses,
   tags,
   leftWidth,
   rightWidth,
-  feedbacks,
+  // feedbacks,
   weeklyTargetProgress,
 }: ArticleReviewProps) {
   const searchParams = useSearchParams();
@@ -76,6 +85,7 @@ export default function ArticleReview({
   // const activeArticleId =
   //   Number(searchParams.get("activeNews")) || articles[0]?.id;
 
+  const { data: session, status } = useSession();
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
   const [selectedText, setSelectedText] = useState<string>("");
   const [selectedWordCount, setSelectedWordCount] = useState<number>();
@@ -88,6 +98,9 @@ export default function ArticleReview({
   );
   const [isOtherIndustryChecked, setIsOtherIndustryChecked] = useState(false);
   const [otherIndustryInput, setOtherIndustryInput] = useState("");
+  const [otherIndustryOptions, setOtherIndustryOptions] = useState<string[]>(
+    [],
+  );
 
   const [showClassifyMenu, setShowClassifyMenu] = useState(false);
   const initialType =
@@ -96,7 +109,9 @@ export default function ArticleReview({
     "classifying" | "cleaning"
   >(initialType);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [notes, setNotes] = useState<string[]>(feedbacks ?? []);
+  const [notes, setNotes] = useState<NoteType[]>([]);
+  // const [feedbacks, setFeedbacks] = useState<NoteType[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
   // const [addingCleaningFeedback, setAddingCleaningFeedback] = useState(false);
   const [addingFeedbackStates, setAddingFeedbackStates] = useState<
     Record<"dislike" | "notsure" | "like", boolean>
@@ -131,9 +146,8 @@ export default function ArticleReview({
   const [centerArticle, setCenterArticle] = useState<
     ArticleType | TrainedArticleType | null
   >(null);
-  const [tempCenterArticle, setTempCenterArticle] = useState<
-    ArticleType | null
-  >(null);
+  const [tempCenterArticle, setTempCenterArticle] =
+    useState<ArticleType | null>(null);
   const [trainedCenterArticle, setTrainedCenterArticle] =
     useState<TrainedArticleType | null>(null);
 
@@ -150,9 +164,11 @@ export default function ArticleReview({
   const [hasMore, setHasMore] = useState(true);
   const trainingIdMap = useRef<Map<number, number>>(new Map());
 
-  const formattedActiveArticleContent = 
-    (centerArticle?.rich_content ?? centerArticle?.content ?? "")
-      .replace(/\\n/g, "\n");
+  const formattedActiveArticleContent = (
+    centerArticle?.rich_content ??
+    centerArticle?.content ??
+    ""
+  ).replace(/\\n/g, "\n");
 
   useEffect(() => {
     const currentType = searchParams.get("type") ?? "cleanining";
@@ -177,9 +193,55 @@ export default function ArticleReview({
     rightWidthRef.current = Number(rightWidth?.value ?? "20");
   }, [leftWidth, rightWidth]);
 
+  // useEffect(() => {
+  //   setNotes(feedbacks ?? []);
+  // }, [centerArticle, feedbacks]);
+
   useEffect(() => {
-    setNotes(feedbacks ?? []);
-  }, [feedbacks]);
+    if (!centerArticle?.id) return;
+
+    let cancelled = false;
+
+    setNotesLoading(true);
+    setNotes([]);
+
+    fetch(`/api/feedbacks?articleId=${centerArticle.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setNotes(data ?? []);
+      })
+      .finally(() => {
+        if (!cancelled) setNotesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [centerArticle?.id]);
+
+  // useEffect(() => {
+  //   if (!centerArticle?.id) return;
+
+  //   const params = new URLSearchParams(searchParams.toString());
+
+  //   // remove a stale activeNews
+  //   if (params.has("activeNews")) {
+  //     params.delete("activeNews");
+  //     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  //   }
+  // }, [centerArticle?.id]);
+
+  useEffect(() => {
+    if (!centerArticle?.id) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    const current = params.get("activeNews");
+
+    if (current !== String(centerArticle.id)) {
+      params.set("activeNews", String(centerArticle.id));
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [centerArticle?.id, pathname, router, searchParams]);
 
   useEffect(() => {
     setArticlesList(articles);
@@ -192,7 +254,7 @@ export default function ArticleReview({
         const nextNews = await fetchNextCenterNews(trainingPageType);
         console.log("nexxxxxxx", nextNews);
         setCenterArticle(nextNews);
-        setTempCenterArticle(nextNews)
+        setTempCenterArticle(nextNews);
       } catch (error) {
         console.error("Fetch error:", error);
       } finally {
@@ -211,7 +273,7 @@ export default function ArticleReview({
         setSelectedRange(selection?.getRangeAt(0));
       }
 
-      // ensure selection is within our content area
+      // ensure selection is within content area
       if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
         setSelectionRect(null);
         setSelectedText("");
@@ -294,17 +356,16 @@ export default function ArticleReview({
   ).length;
 
   const toggleFilter = (option: string) => {
-    const [type] = option.split("-"); // "Category" or "Industry"
+    const [type] = option.split("-");
 
     setCheckedFilters((prev) => {
       const isCurrentlyChecked = !!prev[option];
 
-      // count current selections of this type
       const currentCount = Object.entries(prev).filter(
         ([key, v]) => v && key.startsWith(type + "-"),
       ).length;
 
-      // if trying to ADD and already 2 selected → block
+      // enforce max of 2 selections
       if (!isCurrentlyChecked && currentCount >= 2) {
         toast.info(
           `You can select at most 2 ${type.toLowerCase().replace("y", "i")}es`,
@@ -313,7 +374,7 @@ export default function ArticleReview({
             richColors: true,
           },
         );
-        return prev; // do nothing
+        return prev;
       }
 
       return {
@@ -531,7 +592,7 @@ export default function ArticleReview({
         return;
       }
       setCenterArticle(nextNews);
-      setTempCenterArticle(nextNews)
+      setTempCenterArticle(nextNews);
       handleSetActiveNews(nextNews.id);
       scrollFiltersToTop();
       scrollContentsToTop();
@@ -649,10 +710,9 @@ export default function ArticleReview({
   // }, [articles, searchParams, pathname, router]);
 
   useEffect(() => {
-    
-    console.log("temppppppp",tempCenterArticle)
+    console.log("temppppppp", tempCenterArticle);
   }, [tempCenterArticle]);
-  
+
   useEffect(() => {
     if (trainingPageType !== "classifying") return;
 
@@ -662,13 +722,16 @@ export default function ArticleReview({
 
     if (!categoryString) {
       setCheckedFilters({});
+      setOtherIndustryOptions([]);
       return;
     }
 
     const hydrated: Record<string, boolean> = {};
+    let otherIndustries: string[] = [];
 
     const categoryIds = new Set(categories?.map((c) => String(c.id)) ?? []);
     const industryIds = new Set(industries?.map((i) => String(i.id)) ?? []);
+    const countryIds = new Set(countries?.map((i) => String(i.id)) ?? []);
 
     categoryString.split(",").forEach((id) => {
       const cleanId = id.trim();
@@ -678,11 +741,14 @@ export default function ArticleReview({
         hydrated[`Category-${cleanId}`] = true;
       } else if (industryIds.has(cleanId)) {
         hydrated[`Industry-${cleanId}`] = true;
+      } else if (countryIds.has(cleanId)) {
+        hydrated[`Country-${cleanId}`] = true;
       } else {
-        console.warn("Unknown training id:", cleanId);
+        otherIndustries.push(cleanId);
       }
     });
 
+    setOtherIndustryOptions(otherIndustries);
     setCheckedFilters(hydrated);
   }, [centerArticle, trainingPageType, categories, industries]);
 
@@ -759,7 +825,7 @@ export default function ArticleReview({
     if (!tempCenterArticle) {
       setCenterArticle(null);
       setShowingSelectedNews(false);
-      removeActiveNewsUrl()
+      removeActiveNewsUrl();
       return;
     }
 
@@ -769,22 +835,29 @@ export default function ArticleReview({
     scrollContentsToTop();
     scrollNewsListToTop();
     setShowingSelectedNews(false);
-    removeActiveNewsUrl()
+    removeActiveNewsUrl();
   };
 
-  const removeActiveNewsUrl = ()=>{
+  const removeActiveNewsUrl = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("activeNews");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }
+  };
 
   const hasAtLeastOneCategoryAndIndustry = (() => {
     const entries = Object.entries(checkedFilters).filter(([, v]) => v);
 
     const hasCategory = entries.some(([key]) => key.startsWith("Category-"));
     const hasIndustry = entries.some(([key]) => key.startsWith("Industry-"));
+    const hasCountry = entries.some(([key]) => key.startsWith("Country-"));
+    const hasOtherIndustry =
+      isOtherIndustryChecked && otherIndustryInput.trim().length > 0;
 
-    return hasCategory && hasIndustry;
+    return (
+      hasCategory &&
+      hasCountry &&
+      (hasIndustry || hasOtherIndustry || otherIndustryOptions.length > 0)
+    );
   })();
 
   return (
@@ -1125,6 +1198,57 @@ export default function ArticleReview({
                 <div className="px-4 border-b-2 border-border-dark pb-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
+                      Country
+                    </h3>
+                    {/* <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" /> */}
+                  </div>
+                  <div className="space-y-3">
+                    {countries?.map((option, i) => (
+                      <label
+                        key={i}
+                        className="flex items-center gap-3 cursor-pointer group select-none"
+                      >
+                        <div
+                          className={`
+                          w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-all duration-200
+                          ${
+                            checkedFilters[`Country-${option.id}`]
+                              ? "bg-checkbox-bg"
+                              : "border-gray-300 group-hover:border-blue-400"
+                          }
+                        `}
+                        >
+                          {checkedFilters[`Country-${option.id}`] && (
+                            <Check
+                              className="w-3.5 h-3.5 text-white"
+                              strokeWidth={3}
+                            />
+                          )}
+                          <input
+                            type="checkbox"
+                            className="hidden"
+                            onChange={() =>
+                              toggleFilter(`Country-${option.id}`)
+                            }
+                            checked={!!checkedFilters[`Country-${option.id}`]}
+                          />
+                        </div>
+                        <span
+                          className={`text-sm transition-colors ${
+                            checkedFilters[`Country-${option.id}`]
+                              ? "text-subtitle-dark font-medium"
+                              : "text-neutral-600 group-hover:text-subtitle-dark"
+                          }`}
+                        >
+                          {option.value}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="px-4 border-b-2 border-border-dark pb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-subtitle-dark text-sm tracking-wide">
                       Category
                     </h3>
                     {/* <HelpCircle className="w-4 h-4 text-neutral-400 cursor-help" /> */}
@@ -1222,6 +1346,41 @@ export default function ArticleReview({
                         </span>
                       </label>
                     ))}
+                    {otherIndustryOptions.length > 0 && (
+                      <div className="mt-2">
+                        <div className="flex flex-wrap gap-2">
+                          {otherIndustryOptions.map((industry, i) => (
+                            <label
+                              key={i}
+                              className="flex items-center gap-3 cursor-pointer group select-none"
+                            >
+                              <div
+                                className={`
+                          w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-all duration-200
+                          ${"bg-checkbox-bg"}
+                        `}
+                              >
+                                <Check
+                                  className="w-3.5 h-3.5 text-white"
+                                  strokeWidth={3}
+                                />
+                                <input
+                                  readOnly
+                                  type="checkbox"
+                                  className="hidden"
+                                  checked
+                                />
+                              </div>
+                              <span
+                                className={`text-sm transition-colors truncate ${"text-subtitle-dark font-medium"}`}
+                              >
+                                {industry}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {/* Other industry option */}
                     <label className="flex items-start gap-3 cursor-pointer group select-none">
                       <div
@@ -1294,7 +1453,11 @@ export default function ArticleReview({
               )}
 
               <div className="flex flex-col gap-3 justify-between mb-4">
-                {notes?.length === 0 ? (
+                {notesLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="animate-spin size-4 text-neutral-500" />
+                  </div>
+                ) : notes?.length === 0 ? (
                   <p className="text-neutral-500 text-sm text-center">-</p>
                 ) : (
                   <>
@@ -1307,7 +1470,16 @@ export default function ArticleReview({
                           key={i}
                           className="p-3 rounded-md border bg-neutral-50 text-xs text-neutral-800"
                         >
-                          {note}
+                          <div className="flexi items-center mb-1">
+                            <span className="text-subtitle-dark/80 font-medium text-xs">
+                              {formatDate(note.date) ?? "Unknown date"} -
+                            </span>
+                            <span className="font-medium text-subtitle-dark/80">
+                              {" "}
+                              {note.user}
+                            </span>
+                          </div>
+                          {note.content}
                         </li>
                       ))}
                     </ul>
@@ -1366,7 +1538,14 @@ export default function ArticleReview({
             pageType={trainingPageType}
             newsId={centerArticle?.id as number}
             onAddFeedback={(content) => {
-              setNotes((prev) => [...prev, content]);
+              setNotes((prev) => [
+                ...prev,
+                {
+                  user: session?.user.name ?? "Current User",
+                  date: new Date(),
+                  content,
+                },
+              ]);
             }}
           />
         )}
