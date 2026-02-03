@@ -8,6 +8,7 @@ export async function GET() {
 
     return NextResponse.json(news);
   } catch (err) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    // return new NextResponse("Unauthorized", { status: 401 });
+    return new NextResponse("Not found", { status: 404 });
   }
 }

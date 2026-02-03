@@ -3,19 +3,19 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth";
 import { definition as Definition } from "@/app/generated/prisma/client";
 import { getNextActiveSource } from "./user";
-// import { startOfDay, endOfDay } from "date-fns";
-// import { DateFilterMode } from "@/components/DateRangePicker";
+import { startOfDay, endOfDay } from "date-fns";
+import { DateFilterMode } from "@/components/DateRangePicker";
 
-// export type SearchNewsParams = {
-//   sourceId?: number;
-//   fromDate?: Date;
-//   toDate?: Date;
-//   dateMode?: DateFilterMode;
-//   // industryId?: number;
-//   // categoryId?: number;
-//   // companyId?: number;
-//   page?: number;
-// };
+export type SearchNewsParams = {
+  sourceId?: number;
+  fromDate?: Date;
+  toDate?: Date;
+  dateMode?: DateFilterMode;
+  // industryId?: number;
+  // categoryId?: number;
+  // companyId?: number;
+  page?: number;
+};
 
 export async function getArticles(
   trainingType: "classifying" | "cleaning" = "cleaning",
@@ -406,175 +406,186 @@ export async function getNextClassifyingNews() {
   return nextNews;
 }
 
-// export async function searchNews(params: SearchNewsParams = {}) {
-//   const session = await getServerSession(authOptions);
-//   if (!session?.user?.id) throw new Error("Unauthorized");
+export async function searchNews(params: SearchNewsParams = {}) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) throw new Error("Unauthorized");
 
-//   const userId = session.user.id;
+  const userId = session.user.id;
 
-//   const pageSize = 10;
-//   const page = params.page ?? 1;
-//   const skip = (page - 1) * pageSize;
+  const pageSize = 10;
+  const page = params.page ?? 1;
+  const skip = (page - 1) * pageSize;
 
-//   const isEmpty = params.fromDate === null && params.toDate === null;
+  const isEmpty = params.fromDate === null && params.toDate === null;
 
-//   if (isEmpty) {
-//     return {
-//       page,
-//       pageSize,
-//       totalCount: 0,
-//       totalPages: 0,
-//       count: 0,
-//       data: [],
-//     };
-//   }
-//   console.log("from date:", params.fromDate, "to date:", params.toDate);
+  if (isEmpty) {
+    return {
+      page,
+      pageSize,
+      totalCount: 0,
+      totalPages: 0,
+      count: 0,
+      data: [],
+    };
+  }
 
-//   let fromDate: Date | undefined;
-//   let toDate: Date | undefined;
+  const from = params.fromDate ? new Date(params.fromDate) : undefined;
+  const to = params.toDate ? new Date(params.toDate) : undefined;
 
-//   switch (params.dateMode) {
-//     case "Is empty": {
-//       return {
-//         page,
-//         pageSize,
-//         totalCount: 0,
-//         totalPages: 0,
-//         count: 0,
-//         data: [],
-//       };
-//     }
+  let fromDate: Date | undefined;
+  let toDate: Date | undefined;
 
-//     case "On": {
-//       if (!(params.fromDate instanceof Date)) break;
+  switch (params.dateMode) {
+    case "On":
+      if (from && !isNaN(from.getTime())) {
+        fromDate = startOfDay(from);
+        toDate = endOfDay(from);
+      }
+      break;
 
-//       fromDate = startOfDay(params.fromDate);
-//       toDate = endOfDay(params.fromDate);
-//       break;
-//     }
+    case "Before":
+      if (to && !isNaN(to.getTime())) {
+        toDate = endOfDay(to);
+      }
+      break;
 
-//     case "Before": {
-//       if (!(params.toDate instanceof Date)) break;
+    case "After":
+      if (from && !isNaN(from.getTime())) {
+        fromDate = startOfDay(from);
+      }
+      break;
 
-//       toDate = endOfDay(params.toDate);
-//       break;
-//     }
+    case "Between":
+      if (from && !isNaN(from.getTime()) && to && !isNaN(to.getTime())) {
+        fromDate = startOfDay(from);
+        toDate = endOfDay(to);
+      }
+      break;
+  }
 
-//     case "After": {
-//       if (!(params.fromDate instanceof Date)) break;
+  console.log(
+    "from date:",
+    params.fromDate,
+    "to date:",
+    params.toDate,
+    "datemode:",
+    params.dateMode,
+  );
 
-//       fromDate = startOfDay(params.fromDate);
-//       break;
-//     }
+  // -----------------------------
+  // news-level filters
+  // -----------------------------
+  const newsWhere: any = {
+    invalid: 0,
 
-//     case "Between": {
-//       if (
-//         !(params.fromDate instanceof Date) ||
-//         !(params.toDate instanceof Date)
-//       )
-//         break;
+    ...(params.sourceId && {
+      news_source_id: params.sourceId,
+    }),
 
-//       fromDate = startOfDay(params.fromDate);
-//       toDate = endOfDay(params.toDate);
-//       break;
-//     }
+    ...(fromDate || toDate
+      ? {
+          published_date: {
+            ...(fromDate && { gte: fromDate }),
+            ...(toDate && { lte: toDate }),
+          },
+        }
+      : {}),
 
-//     default:
-//       break;
-//   }
+    // ...(params.industryId && {
+    //   industry_id: params.industryId,
+    // }),
 
-//   // -----------------------------
-//   // news-level filters
-//   // -----------------------------
-//   const newsWhere: any = {
-//     invalid: 0,
+    // ...(params.companyId && {
+    //   company_news: {
+    //     some: {
+    //       company_id: params.companyId,
+    //     },
+    //   },
+    // }),
+  };
 
-//     ...(params.sourceId && {
-//       news_source_id: params.sourceId,
-//     }),
+  const totalCount = await prisma.news_training.count({
+    where: {
+      news: {
+        is: newsWhere,
+      },
+    },
+  });
 
-//     ...(params.fromDate || params.toDate
-//       ? {
-//           published_date: {
-//             ...(fromDate && { gte: fromDate }),
-//             ...(toDate && { lte: toDate }),
-//           },
-//         }
-//       : {}),
+  // const rows = await prisma.news_training.findMany({
+  //   where: {
+  //     // ...trainingWhere,
+  //     news: {
+  //       is: newsWhere,
+  //     },
+  //   },
+  //   orderBy: { id: "desc" },
+  //   take: pageSize,
+  //   skip,
+  //   include: {
+  //     news: {
+  //       include: {
+  //         news_source: true,
+  //         company_news: {
+  //           include: { company: true },
+  //         },
+  //         news_training: {
+  //           where: { user_id: userId },
+  //           select: {
+  //             id: true,
+  //             category: true,
+  //             like: true,
+  //             feedback: true,
+  //           },
+  //         },
+  //       },
+  //     },
+  //   },
+  // });
 
-//     // ...(params.industryId && {
-//     //   industry_id: params.industryId,
-//     // }),
+  // -----------------------------
+  // de-duplicate news
+  // -----------------------------
+  // const seen = new Set<number>();
+  // const data = rows
+  //   .map((r) => r.news)
+  //   .filter((n): n is NonNullable<typeof n> => n !== null)
+  //   .filter((n) => {
+  //     if (seen.has(n.id)) return false;
+  //     seen.add(n.id);
+  //     return true;
+  //   });
 
-//     // ...(params.companyId && {
-//     //   company_news: {
-//     //     some: {
-//     //       company_id: params.companyId,
-//     //     },
-//     //   },
-//     // }),
-//   };
+  const data = await prisma.news.findMany({
+    where: newsWhere,
+    orderBy: { published_date: "desc" },
+    take: pageSize,
+    skip,
+    include: {
+      news_source: true,
+      company_news: {
+        include: { company: true },
+      },
+      news_training: {
+        where: { user_id: userId },
+        select: {
+          id: true,
+          category: true,
+          like: true,
+          feedback: true,
+        },
+      },
+    },
+  });
 
-//   const totalCount = await prisma.news_training.count({
-//     where: {
-//       news: {
-//         is: newsWhere,
-//       },
-//     },
-//   });
+  console.log("filtered data:", data);
 
-//   const rows = await prisma.news_training.findMany({
-//     where: {
-//       // ...trainingWhere,
-//       news: {
-//         is: newsWhere,
-//       },
-//     },
-//     orderBy: { id: "desc" },
-//     take: pageSize,
-//     skip,
-//     include: {
-//       news: {
-//         include: {
-//           news_source: true,
-//           company_news: {
-//             include: { company: true },
-//           },
-//           news_training: {
-//             where: { user_id: userId },
-//             select: {
-//               id: true,
-//               category: true,
-//               like: true,
-//               feedback: true,
-//             },
-//           },
-//         },
-//       },
-//     },
-//   });
-
-//   // -----------------------------
-//   // de-duplicate news
-//   // -----------------------------
-//   const seen = new Set<number>();
-//   const data = rows
-//     .map((r) => r.news)
-//     .filter((n): n is NonNullable<typeof n> => n !== null)
-//     .filter((n) => {
-//       if (seen.has(n.id)) return false;
-//       seen.add(n.id);
-//       return true;
-//     });
-
-//   console.log("filtered news:", data);
-
-//   return {
-//     page,
-//     pageSize,
-//     totalCount,
-//     totalPages: Math.ceil(totalCount / pageSize),
-//     count: data.length,
-//     data,
-//   };
-// }
+  return {
+    page,
+    pageSize,
+    totalCount,
+    totalPages: Math.ceil(totalCount / pageSize),
+    count: data.length,
+    data,
+  };
+}

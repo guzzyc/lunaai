@@ -315,7 +315,7 @@ const TargetModal: React.FC<TargetModalProps> = ({
               value={formData.sourceId}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a training type" />
+                <SelectValue placeholder="Select a news source" />
               </SelectTrigger>
               <SelectContent className="z-[999]">
                 <SelectGroup>
