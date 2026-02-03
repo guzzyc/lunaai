@@ -64,12 +64,13 @@ model news {
   news_source_id Int?
   url            String?        @db.VarChar(2048)
   content        String?        @db.Text
-  rich_content   String?        @db.Text
   time_stamp     DateTime?      @db.DateTime(0)
   author         String?        @db.VarChar(255)
   header         String?        @db.Text
   invalid        Int?           @default(0)
   external_id    String?        @db.VarChar(45)
+  rich_content   String?        @db.Text
+  for_classifying Int?           @default(0)
   company_news   company_news[]
   news_source    news_source?   @relation(fields: [news_source_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_ibfk_1")
   news_training  news_training[]
@@ -139,7 +140,7 @@ model news_training {
 }
 
 model company_document {
-  id           Int       @id @default(autoincrement())
+  id      Int @id @default(autoincrement())
   comp_id Int
   doc_id  Int
 }
@@ -164,6 +165,31 @@ model lead_deletethistable {
   @@index([company_id], map: "company_id")
   @@index([source_id], map: "source_id")
   @@index([user_id], map: "user_id")
+}
+
+model news_bad_log {
+  id        BigInt    @id @unique(map: "uq_news_bad_log_id") @default(autoincrement())
+  user_id   Int?
+  news_id   Int?
+  show_date DateTime? @db.DateTime(0)
+}
+
+model news_dashboard {
+  id          Int       @id
+  source_id   Int?
+  day         DateTime? @db.Date
+  count_day   Int?
+  week        DateTime? @db.Date
+  count_week  Int?
+  month       DateTime? @db.Date
+  count_month Int?
+  year        Int?
+  count_year  Int?
+
+  @@unique([source_id, day], map: "indexday")
+  @@unique([source_id, month], map: "indexmonth")
+  @@unique([source_id, week], map: "indexweek")
+  @@unique([source_id, year], map: "indexyear")
 }
 
 enum task_status {

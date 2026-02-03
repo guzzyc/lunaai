@@ -41,6 +41,14 @@ export async function insertCleaningFeedback(
       },
     });
   }
+
+  //delete from bad news list
+  await prisma.news_bad_log.deleteMany({
+    where:{
+      news_id:newsId,
+      user_id:userId
+    }
+  })
 }
 
 export async function saveFeedback(content: string, newsId: number) {
@@ -53,15 +61,17 @@ export async function saveFeedback(content: string, newsId: number) {
     where: {
       news_id: newsId,
       user_id: userId,
+      feedback: null,
     },
     orderBy: { id: "desc" },
   });
 
-  if (existing && existing.feedback === null) {
+  if (existing) {
     return prisma.news_training.update({
       where: { id: existing.id },
       data: {
-        feedback: content
+        feedback: content,
+        time_stamp: new Date(),
       },
     });
   }

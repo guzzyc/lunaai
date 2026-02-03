@@ -3,8 +3,9 @@
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { containerClient } from "@/lib/azureBlob";
+import { containerClient } from "@/lib/azure/azureBlob";
 import { BlobSASPermissions } from "@azure/storage-blob";
+import { deleteBlob } from "../azure/deleteBlob";
 
 // export async function uploadDocuments(
 //   files: File[],
@@ -116,6 +117,7 @@ export async function getDocumentUploadUrl(
 
   return blobClient.generateSasUrl({
     permissions,
+    startsOn: new Date(Date.now() - 5 * 60 * 1000),
     expiresOn: new Date(Date.now() + 10 * 60 * 1000),
     contentType,
   });
@@ -132,4 +134,25 @@ export async function linkDocumentToCompany(
     },
   });
 }
+
+export async function deleteDocument(documentId: number) {
+  const id = Number(documentId);
+
+  if (isNaN(id)) {
+    throw new Error(`Invalid ID provided: ${documentId}`);
+  }
+
+  // remove company link
+  await prisma.company_document.deleteMany({
+    where: { doc_id: id },
+  });
+
+  // remove document row
+  await prisma.document.delete({
+    where: { id: id },
+  });
+
+  await deleteBlob(id);
+}
+
 

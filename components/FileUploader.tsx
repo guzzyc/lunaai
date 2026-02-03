@@ -7,13 +7,17 @@ import {
 import { FileListItem } from "./FileListItem";
 import { UploadIcon } from "lucide-react";
 import { simulateFileUpload } from "@/lib/fileUploadProgress";
+import { ExistingFilesList } from "./ExistingFilesList";
 
 export const FileUploader: React.FC<FileUploaderProps> = ({
   onUploadComplete,
+  onDelete,
   // maxFiles = 5,
   // maxSizeMB = 10,
   acceptedTypes = ["image/*", "application/pdf"],
   className = "",
+  existingFiles,
+  isEditMode,
 }) => {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -106,6 +110,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
   return (
     <div className={`w-full ${className}`}>
+      {/* Existing files */}
+      {(isEditMode && existingFiles.length > 0) &&  (
+        <div className="mb-4 mt-2">
+          <h3 className="text-sm font-medium text-subtitle-dark mb-2">
+            Previous files
+          </h3>
+
+          <ExistingFilesList onDelete={onDelete} files={existingFiles} />
+        </div>
+      )}
+
       <div
         onDragOver={(e) => {
           e.preventDefault();

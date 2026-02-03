@@ -7,6 +7,7 @@ import {
   getTags,
   getTaskTypes,
   geteNewsSources,
+  getCountries,
 } from "@/lib/queries/definition";
 import { getUsers } from "@/lib/queries/user";
 import { getServerSession } from "next-auth";
@@ -23,6 +24,7 @@ export default async function Page() {
     userData,
     categoryData,
     industryData,
+    countryData,
     tagData,
     taskTypeData,
     targetData,
@@ -31,6 +33,7 @@ export default async function Page() {
     getUsers(),
     getCategories(),
     getIndustries(),
+    getCountries(),
     getTags(),
     getTaskTypes(),
     getTargets(),
@@ -44,6 +47,7 @@ export default async function Page() {
       initialUsers={userData.users}
       initialCategories={categoryData}
       initialIndustries={industryData}
+      initialCountries={countryData}
       initialTags={tagData}
       initialTaskTypes={taskTypeData}
       initialTargets={targetData}
