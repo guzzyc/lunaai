@@ -12,11 +12,19 @@ const FeedBackModal = ({
   onAddFeedback,
   pageType,
   newsId,
+  onlike,
+  onDislike,
+  onNotSure,
+  addingFeedbackStates,
 }: {
   closeModal: VoidFunction;
-  onAddFeedback: (content:string)=>void;
+  onAddFeedback: (content: string) => void;
   pageType: "cleaning" | "classifying";
   newsId: number;
+  onlike: VoidFunction;
+  onDislike: VoidFunction;
+  onNotSure: VoidFunction;
+  addingFeedbackStates: Record<"dislike" | "notsure" | "like", boolean>;
 }) => {
   const [isSaving, setSaving] = useState(false);
   const [activeFeedback, setActiveFeedback] = useState("");
@@ -25,13 +33,12 @@ const FeedBackModal = ({
     setSaving(true);
     try {
       await saveFeedback(activeFeedback, newsId);
-      onAddFeedback(activeFeedback)
-      closeModal()
+      onAddFeedback(activeFeedback);
+      closeModal();
     } catch (error) {
       toast.error("Failed to add feedback.");
-    }
-    finally{
-      setSaving(false)
+    } finally {
+      setSaving(false);
     }
   };
   return (
@@ -52,37 +59,54 @@ const FeedBackModal = ({
           rows={2}
           onChange={(e) => setActiveFeedback(e.target.value)}
         />
-        <Button disabled={isSaving} size="sm" className="cursor-pointer flex items-center gap-2" onClick={handleSaveFeedback}>
+        <Button
+          disabled={isSaving}
+          size="sm"
+          className="cursor-pointer flex items-center gap-2"
+          onClick={handleSaveFeedback}
+        >
           {isSaving && <Loader2 className="animate-spin size-4" />}
           <span>Save</span>
         </Button>
       </div>
       {pageType === "classifying" && (
         <div className="flex items-center gap-3">
-          <button className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-danger/80 hover:text-red-600 hover:bg-red-50 py-1.5 rounded-lg transition-colors border border-transparent hover:border-red-100 cursor-pointer">
-            <Image
-              src="/icons/dislike.svg"
-              alt="Luna logo"
-              width={16}
-              height={16}
-              className="flex items-center p-0 m-0 "
-            />
+          <button onClick={onDislike} className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-danger/80 hover:text-red-600 hover:bg-red-50 py-1.5 rounded-lg transition-colors border border-transparent hover:border-red-100 cursor-pointer">
+            {addingFeedbackStates.dislike ? (
+              <Loader2 className="animate-spin size-4" />
+            ) : (
+              <Image
+                src="/icons/dislike.svg"
+                alt="Luna logo"
+                width={16}
+                height={16}
+                className="flex items-center p-0 m-0 "
+              />
+            )}
             Dislike
           </button>
           <div className=" h-7 w-px bg-neutral-300"></div>
-          <button className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 py-1.5 rounded-lg transition-colors border border-transparent hover:border-neutral-200 cursor-pointer">
-            <ThumbsDown className="w-4 h-4 rotate-90" />
+          <button onClick={onNotSure} className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 py-1.5 rounded-lg transition-colors border border-transparent hover:border-neutral-200 cursor-pointer">
+            {addingFeedbackStates.notsure ? (
+              <Loader2 className="animate-spin size-4" />
+            ) : (
+              <ThumbsDown className="w-4 h-4 rotate-90" />
+            )}
             Not sure
           </button>
           <div className=" h-7 w-px bg-neutral-300"></div>
-          <button className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-success/80 hover:text-green-600 hover:bg-green-50 py-1.5 rounded-lg transition-colors border border-transparent hover:border-green-100 cursor-pointer">
-            <Image
-              src="/icons/like.svg"
-              alt="Luna logo"
-              width={16}
-              height={16}
-              className="flex items-center p-0 m-0 "
-            />
+          <button onClick={onlike} className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-success/80 hover:text-green-600 hover:bg-green-50 py-1.5 rounded-lg transition-colors border border-transparent hover:border-green-100 cursor-pointer">
+            {addingFeedbackStates.like ? (
+              <Loader2 className="animate-spin size-4" />
+            ) : (
+              <Image
+                src="/icons/like.svg"
+                alt="Luna logo"
+                width={16}
+                height={16}
+                className="flex items-center p-0 m-0 "
+              />
+            )}
             Like
           </button>
         </div>

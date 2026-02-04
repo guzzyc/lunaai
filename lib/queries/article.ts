@@ -202,7 +202,6 @@ export async function getFeedbacks(newsId: number) {
     date: r.time_stamp,
     content: r.feedback as string,
   }));
-  
 }
 
 export async function getNextCenterNews() {
@@ -330,6 +329,25 @@ export async function getNextClassifyingNews() {
   const sourceId = activeSource?.sourceId;
   if (!sourceId) return null;
 
+  // Get min & max id for this source
+  const result = await prisma.news.aggregate({
+    _min: { id: true },
+    _max: { id: true },
+    where: {
+      news_source_id: sourceId,
+      invalid: 0,
+      for_classifying: 1,
+    },
+  });
+
+  const minId = result._min.id;
+  const maxId = result._max.id;
+
+  if (!minId || !maxId) return null;
+
+  // generate random id
+  const randomId = Math.floor(Math.random() * (maxId - minId + 1)) + minId;
+
   // const sourceIdStr = userTarget?.name
   //   ?.split(";")
   //   .find((part) => part.startsWith("sourceid:"))
@@ -384,6 +402,7 @@ export async function getNextClassifyingNews() {
 
   const nextNews = await prisma.news.findFirst({
     where: {
+      id: { gte: randomId },
       news_source_id: sourceId,
       NOT: {
         id: { in: trainedNewsIds },

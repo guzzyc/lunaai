@@ -430,7 +430,13 @@ export default function ArticleReview({
     > = {};
 
     articlesList.forEach((article) => {
-      const likeValue = article.news_training?.[0]?.like;
+      // Find the news_training with the highest id
+      const trainings = article.news_training ?? [];
+      const latestTraining = trainings.reduce(
+        (max, curr) => (curr.id > (max?.id ?? -Infinity) ? curr : max),
+        null as typeof trainings[0] | null
+      );
+      const likeValue = latestTraining?.like;
 
       if (!likeValue) {
         colors[article.id] = { normal: null, light: null };
@@ -444,18 +450,18 @@ export default function ArticleReview({
       };
     });
 
-    if (trainingPageType === "classifying" && centerArticle) {
-      const centerLikeValue = (centerArticle as TrainedArticleType)
-        ?.news_training?.[0]?.like;
+    // if (trainingPageType === "classifying" && centerArticle) {
+    //   const centerLikeValue = (centerArticle as TrainedArticleType)
+    //     ?.news_training?.[0]?.like;
 
-      if (centerLikeValue) {
-        const centerIndex = centerLikeValue - 1;
-        colors[centerArticle.id] = {
-          normal: TRAINING_COLORS[centerIndex],
-          light: TRAINING_COLORS_LIGHT[centerIndex],
-        };
-      }
-    }
+    //   if (centerLikeValue) {
+    //     const centerIndex = centerLikeValue - 1;
+    //     colors[centerArticle.id] = {
+    //       normal: TRAINING_COLORS[centerIndex],
+    //       light: TRAINING_COLORS_LIGHT[centerIndex],
+    //     };
+    //   }
+    // }
 
     setArticleColors(colors);
   }, [articlesList, centerArticle, trainingPageType]);
@@ -565,20 +571,25 @@ export default function ArticleReview({
 
     const feedbackNumber = feedbackMap[feedbackType];
 
-    setArticleColors((prev) => ({
-      ...prev,
-      [centerArticle?.id as number]: feedbackColorMap[feedbackType],
-    }));
     try {
       await insertCleaningFeedback(feedbackNumber, centerArticle?.id as number);
       // toast.success("Feedback added successfully", { richColors: true });
       // setArticlesList(prev => [...prev, centerArticle]);
-      shiftNextNews();
+      if(trainingPageType === "cleaning") {
+        shiftNextNews();
+      }
+      else{
+        setArticleColors((prev) => ({
+          ...prev,
+          [centerArticle?.id as number]: feedbackColorMap[feedbackType],
+        }));
+      }
     } catch (err) {
       toast.error("Failed to add feedback", { richColors: true });
       console.log("errrrrr", err);
     } finally {
       setAddingFeedbackStates((prev) => ({ ...prev, [feedbackType]: false }));
+      setShowFeedbackModal(false);
     }
   };
 
@@ -1547,6 +1558,10 @@ export default function ArticleReview({
                 },
               ]);
             }}
+            onlike={() => handleCleaningFeedback("like")}
+            onDislike={() => handleCleaningFeedback("dislike")}
+            onNotSure={() => handleCleaningFeedback("notsure")}
+            addingFeedbackStates={addingFeedbackStates}
           />
         )}
 
