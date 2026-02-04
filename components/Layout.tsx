@@ -69,9 +69,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <a href="/" className="hover:text-blue-600 transition-colors">
               Dashboard
             </a>
-            <a href="/" className="hover:text-blue-600 transition-colors">
+            <Link
+              href="/news-search"
+              className={cn(
+                "transition-colors relative py-5 hover:text-blue-600",
+                currentPath.startsWith("/news-search") && "text-blue-600"
+              )}
+            >
               Search
-            </a>
+            </Link>
             <Link
               href="/trainings?type=cleaning"
               className={cn(

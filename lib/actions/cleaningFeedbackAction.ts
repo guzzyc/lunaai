@@ -16,23 +16,33 @@ export async function insertCleaningFeedback(
 
   const userId = session.user.id;
 
-  const existingFeedback = await prisma.news_training.findFirst({
-    where: {
-      news_id: newsId,
-      user_id: userId,
-    },
-  });
+  // const existingFeedback = await prisma.news_training.findFirst({
+  //   where: {
+  //     news_id: newsId,
+  //     user_id: userId,
+  //   },
+  // });
 
-  if (existingFeedback) {
-    await prisma.news_training.update({
-      where: { id: existingFeedback.id },
-      data: {
-        like: likeValue,
-        time_stamp: new Date(),
-      },
-    });
-  } else {
-    await prisma.news_training.create({
+  // if (existingFeedback) {
+  //   await prisma.news_training.update({
+  //     where: { id: existingFeedback.id },
+  //     data: {
+  //       like: likeValue,
+  //       time_stamp: new Date(),
+  //     },
+  //   });
+  // } else {
+  //   await prisma.news_training.create({
+  //     data: {
+  //       news_id: newsId,
+  //       user_id: userId,
+  //       like: likeValue,
+  //       time_stamp: new Date(),
+  //     },
+  //   });
+  // }
+
+  await prisma.news_training.create({
       data: {
         news_id: newsId,
         user_id: userId,
@@ -40,7 +50,6 @@ export async function insertCleaningFeedback(
         time_stamp: new Date(),
       },
     });
-  }
 
   //delete from bad news list
   await prisma.news_bad_log.deleteMany({
