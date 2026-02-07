@@ -5,6 +5,7 @@ import { definition as Definition } from "@/app/generated/prisma/client";
 import { getNextActiveSource } from "./user";
 import { startOfDay, endOfDay } from "date-fns";
 import { DateFilterMode } from "@/components/DateRangePicker";
+import { is } from "date-fns/locale";
 
 export type SearchNewsParams = {
   sourceId?: number;
@@ -15,6 +16,7 @@ export type SearchNewsParams = {
   // categoryId?: number;
   // companyId?: number;
   page?: number;
+  url?: string;
 };
 
 export async function getArticles(
@@ -422,7 +424,10 @@ export async function getNextClassifyingNews() {
     },
   });
 
-  return nextNews;
+  return {
+    news: nextNews,
+    isNeverTrained: (nextNews?.news_training?.length ?? 0) === 0,
+  };
 }
 
 export async function searchNews(params: SearchNewsParams = {}) {
@@ -491,12 +496,42 @@ export async function searchNews(params: SearchNewsParams = {}) {
     params.dateMode,
   );
 
+  //search by url
+  let urlFilter: any = undefined;
+
+  if (params.url && params.url.trim()) {
+    const searchUrl = params.url.trim();
+
+    // first check exact match
+    const exact = await prisma.news.findFirst({
+      where: {
+        url: searchUrl,
+        invalid: 0,
+      },
+      select: { id: true },
+    });
+
+    if (exact) {
+      urlFilter = { id: exact.id };
+    } else {
+      // check by LIKE '%value'
+      urlFilter = {
+        url: {
+          endsWith: searchUrl, 
+        },
+      };
+    }
+  }
+
+
   // -----------------------------
   // news-level filters
   // -----------------------------
   const newsWhere: any = {
     invalid: 0,
 
+    ...(urlFilter && urlFilter),
+    
     ...(params.sourceId && {
       news_source_id: params.sourceId,
     }),
