@@ -10,7 +10,7 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
@@ -18,10 +18,11 @@ import { toast } from "sonner";
 import { Skeleton } from "./ui/skeleton";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const [searchValue, setSearchValue] = useState("");
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
   const currentPath = usePathname();
   const { data: session, status } = useSession();
   const isLoadingUser = status === "loading";
@@ -69,14 +70,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <a href="/" className="hover:text-blue-600 transition-colors">
               Dashboard
             </a>
-            <a href="/" className="hover:text-blue-600 transition-colors">
+            <Link
+              href="/news-search"
+              className={cn(
+                "transition-colors relative py-5 hover:text-blue-600",
+                currentPath.startsWith("/news-search") && "text-blue-600",
+              )}
+            >
               Search
-            </a>
+            </Link>
             <Link
               href="/trainings?type=cleaning"
               className={cn(
                 "transition-colors relative py-5 hover:text-blue-600",
-                currentPath.startsWith("/trainings") && "text-blue-600"
+                currentPath.startsWith("/trainings") && "text-blue-600",
               )}
             >
               Trainings
@@ -86,7 +93,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               href="/companies"
               className={cn(
                 "transition-colors relative py-5 hover:text-blue-600",
-                currentPath.startsWith("/companies") && "text-blue-600"
+                currentPath.startsWith("/companies") && "text-blue-600",
               )}
             >
               Companies
@@ -95,17 +102,33 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex items-center gap-5">
-          <div className="relative group">
-            <Search
-              size={14}
-              className="text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-blue-500 transition-colors"
-            />
-            <input
-              type="text"
-              placeholder="Search for anything..."
-              className="pl-9 pr-4 py-2 w-[314px] border border-searchbox rounded-lg text-xs text-subtitle-dark bg-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
-            />
-          </div>
+          {currentPath.startsWith("/news-search") && (
+            <div className="relative group">
+              <Search
+                size={14}
+                className="text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-title-dark transition-colors"
+              />
+              <input
+                type="text"
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const value = searchValue.trim();
+
+                    if (value) {
+                      router.push(
+                        `/news-search?url=${encodeURIComponent(value)}`,
+                      );
+                    } else {
+                      router.push("/news-search");
+                    }
+                  }
+                }}
+                placeholder="Search for news by URL and press enter"
+                className="pl-9 pr-4 py-2 w-[314px] border border-searchbox rounded-lg text-xs text-subtitle-dark bg-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-border-dark focus:border-border-dark transition-all"
+              />
+            </div>
+          )}
 
           <div className="relative" ref={menuRef}>
             {isLoadingUser ? (

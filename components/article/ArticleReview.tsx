@@ -36,6 +36,7 @@ import Link from "next/link";
 import {
   fetchMoreArticles,
   fetchNextCenterNews,
+  fetchNextClassifyingCenterNews,
 } from "@/lib/queries/client-queries/newsClient";
 import { WeeklyTargetProgress } from "@/lib/queries/user";
 import { tr } from "zod/v4/locales";
@@ -148,8 +149,7 @@ export default function ArticleReview({
   >(null);
   const [tempCenterArticle, setTempCenterArticle] =
     useState<ArticleType | null>(null);
-  const [trainedCenterArticle, setTrainedCenterArticle] =
-    useState<TrainedArticleType | null>(null);
+  const [isCenterArticleNeverTrained, setIsCenterArticleNeverTrained] = useState(false);
 
   const [centerArticleType, setCenterArticleType] = useState<
     "trained" | "untrained"
@@ -220,6 +220,14 @@ export default function ArticleReview({
   }, [centerArticle?.id]);
 
   // useEffect(() => {
+    
+  //   if(trainingPageType === "classifying" && centerArticle) {
+  //     const isTrained = (centerArticle as TrainedArticleType)?.news_training?.length > 0;
+  //     setIsCenterArticleTrained(isTrained);
+  //   }
+  // }, [trainingPageType, centerArticle?.id]);
+
+  // useEffect(() => {
   //   if (!centerArticle?.id) return;
 
   //   const params = new URLSearchParams(searchParams.toString());
@@ -251,10 +259,18 @@ export default function ArticleReview({
     const fetchData = async () => {
       setLoadingNextCenterNews(true);
       try {
-        const nextNews = await fetchNextCenterNews(trainingPageType);
-        console.log("nexxxxxxx", nextNews);
-        setCenterArticle(nextNews);
-        setTempCenterArticle(nextNews);
+        if (trainingPageType === "classifying") {
+          const nextClassifyingNews = await fetchNextClassifyingCenterNews();
+          console.log("nextClassifyingNews", nextClassifyingNews);
+          setCenterArticle(nextClassifyingNews?.news ?? null);
+          setTempCenterArticle(nextClassifyingNews?.news ?? null);
+          setIsCenterArticleNeverTrained(nextClassifyingNews?.isNeverTrained ?? false);
+        } else {
+          const nextNews = await fetchNextCenterNews();
+          console.log("nexxxxxxx", nextNews);
+          setCenterArticle(nextNews);
+          setTempCenterArticle(nextNews);
+        }
       } catch (error) {
         console.error("Fetch error:", error);
       } finally {
@@ -430,7 +446,13 @@ export default function ArticleReview({
     > = {};
 
     articlesList.forEach((article) => {
-      const likeValue = article.news_training?.[0]?.like;
+      // Find the news_training with the highest id
+      const trainings = article.news_training ?? [];
+      const latestTraining = trainings.reduce(
+        (max, curr) => (curr.id > (max?.id ?? -Infinity) ? curr : max),
+        null as (typeof trainings)[0] | null,
+      );
+      const likeValue = latestTraining?.like;
 
       if (!likeValue) {
         colors[article.id] = { normal: null, light: null };
@@ -444,18 +466,18 @@ export default function ArticleReview({
       };
     });
 
-    if (trainingPageType === "classifying" && centerArticle) {
-      const centerLikeValue = (centerArticle as TrainedArticleType)
-        ?.news_training?.[0]?.like;
+    // if (trainingPageType === "classifying" && centerArticle) {
+    //   const centerLikeValue = (centerArticle as TrainedArticleType)
+    //     ?.news_training?.[0]?.like;
 
-      if (centerLikeValue) {
-        const centerIndex = centerLikeValue - 1;
-        colors[centerArticle.id] = {
-          normal: TRAINING_COLORS[centerIndex],
-          light: TRAINING_COLORS_LIGHT[centerIndex],
-        };
-      }
-    }
+    //   if (centerLikeValue) {
+    //     const centerIndex = centerLikeValue - 1;
+    //     colors[centerArticle.id] = {
+    //       normal: TRAINING_COLORS[centerIndex],
+    //       light: TRAINING_COLORS_LIGHT[centerIndex],
+    //     };
+    //   }
+    // }
 
     setArticleColors(colors);
   }, [articlesList, centerArticle, trainingPageType]);
@@ -565,27 +587,49 @@ export default function ArticleReview({
 
     const feedbackNumber = feedbackMap[feedbackType];
 
-    setArticleColors((prev) => ({
-      ...prev,
-      [centerArticle?.id as number]: feedbackColorMap[feedbackType],
-    }));
     try {
       await insertCleaningFeedback(feedbackNumber, centerArticle?.id as number);
       // toast.success("Feedback added successfully", { richColors: true });
       // setArticlesList(prev => [...prev, centerArticle]);
-      shiftNextNews();
+      if (trainingPageType === "cleaning") {
+        shiftNextNews();
+      } else {
+        setArticleColors((prev) => ({
+          ...prev,
+          [centerArticle?.id as number]: feedbackColorMap[feedbackType],
+        }));
+      }
     } catch (err) {
       toast.error("Failed to add feedback", { richColors: true });
       console.log("errrrrr", err);
     } finally {
       setAddingFeedbackStates((prev) => ({ ...prev, [feedbackType]: false }));
+      setShowFeedbackModal(false);
+      setIsCenterArticleNeverTrained(false);
     }
   };
 
   const shiftNextNews = async () => {
     setLoadingNextCenterNews(true);
     try {
-      const nextNews = await fetchNextCenterNews(trainingPageType);
+      if (trainingPageType === "classifying") {
+        const nextClassifyingNews = await fetchNextClassifyingCenterNews();
+        if (!nextClassifyingNews?.news) {
+          handleSetActiveNews(centerArticle?.id as number);
+          setCenterArticle(null);
+          return;
+        }
+        setCenterArticle(nextClassifyingNews.news);
+        setTempCenterArticle(nextClassifyingNews.news);
+        setIsCenterArticleNeverTrained(nextClassifyingNews.isNeverTrained);
+        handleSetActiveNews(nextClassifyingNews.news.id);
+        scrollFiltersToTop();
+        scrollContentsToTop();
+        scrollNewsListToTop();
+        return;
+      }
+
+      const nextNews = await fetchNextCenterNews();
       if (!nextNews) {
         handleSetActiveNews(centerArticle?.id as number);
         setCenterArticle(null);
@@ -613,6 +657,13 @@ export default function ArticleReview({
     if ((!selectedRange || !allowNext) && wordCount > 550) {
       toast.info("Please make text selection from the news", {
         richColors: true,
+      });
+      return;
+    }
+    if (isCenterArticleNeverTrained) {
+      toast.info("Please make a selection from the feedbacks", {
+        richColors: true,
+        position:"bottom-center"
       });
       return;
     }
@@ -819,6 +870,7 @@ export default function ArticleReview({
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setCenterArticle(article);
     setShowingSelectedNews(true);
+    setIsCenterArticleNeverTrained(false);
   };
 
   const handleContinueClicked = () => {
@@ -1099,12 +1151,11 @@ export default function ArticleReview({
           >
             <div
               className={`my-6 rounded-3xl border-6 shadow-sm h-fit w-[93%] ${
-                articleColors[centerArticle.id]?.light ?? ""
-              }`}
+                isCenterArticleNeverTrained ? "border-yellow-500/50" : articleColors[centerArticle.id]?.light ?? ""}`}
             >
               <div
                 className={`bg-white min-h-full p-12 shadow-sm relative border-x rounded-[18px] border ${
-                  articleColors[centerArticle.id]?.normal ?? ""
+                  isCenterArticleNeverTrained ? "border-yellow-500" : articleColors[centerArticle.id]?.normal ?? ""
                 }`}
               >
                 <div className="text-title-red font-bold text-sm tracking-wider uppercase px-2 py-1 mb-2 rounded w-fit ml-auto">
@@ -1547,6 +1598,10 @@ export default function ArticleReview({
                 },
               ]);
             }}
+            onlike={() => handleCleaningFeedback("like")}
+            onDislike={() => handleCleaningFeedback("dislike")}
+            onNotSure={() => handleCleaningFeedback("notsure")}
+            addingFeedbackStates={addingFeedbackStates}
           />
         )}
 
