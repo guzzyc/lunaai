@@ -13,7 +13,8 @@ export async function POST(req: Request) {
       // categoryId,
       // companyId,
       page,
-      dateMode
+      dateMode,
+      url
     } = body ?? {};
 
     const result = await searchNews({
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
       // companyId: companyId ? Number(companyId) : undefined,
       page: page ? Number(page) : 1,
       dateMode: dateMode,
+      url: url,
     });
 
     return NextResponse.json(result);

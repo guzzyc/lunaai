@@ -92,6 +92,10 @@ export default function NewsSearch({
   newsSourcesOptions,
 }: NewsSearchProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const urlQuery = searchParams.get("url");
+  const [urlConsumed, setUrlConsumed] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   // const [notes, setNotes] = useState<string[]>(feedbacks ?? []);
   const [isSourceSelectorOpen, setSourceSelectorOpen] = useState(false);
@@ -132,6 +136,7 @@ export default function NewsSearch({
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const requestIdRef = useRef(0);
 
   const formattedActiveArticleContent = (
     selectedArticle?.rich_content ??
@@ -171,8 +176,12 @@ export default function NewsSearch({
     setPage(1);
   }, [filter]);
 
+  const didInitRef = useRef(false);
   useEffect(() => {
-    setArticlesList(articles);
+    if (!didInitRef.current) {
+      setArticlesList(articles);
+      didInitRef.current = true;
+    }
   }, [articles]);
 
   const startResizingLeft = useCallback(() => setIsResizingLeft(true), []);
@@ -273,6 +282,8 @@ export default function NewsSearch({
   // search news
   useEffect(() => {
     const applyFilters = async () => {
+      const requestId = ++requestIdRef.current;
+
       const getDateParams = () => {
         switch (filter.dateMode) {
           case "On":
@@ -323,23 +334,35 @@ export default function NewsSearch({
           toDate,
           page,
           dateMode: filter.dateMode,
+          url: urlQuery ?? undefined,
         });
+
+        if (requestId !== requestIdRef.current) return;
 
         setArticlesList(res.data);
         setTotalPages(res.totalPages);
         setTotalCount(res.totalCount);
-        setSelectedArticle(null); 
+        setSelectedArticle(null);
         scrollContentsToTop();
+
+        if (urlQuery && !urlConsumed) {
+          setUrlConsumed(true);
+          router.replace(pathname); // removes ?url=...
+        }
       } catch (e) {
         console.log("Error applying filters:", e);
-        toast.error("Failed to apply filters");
+        if (requestId === requestIdRef.current) {
+          toast.error("Failed to apply filters");
+        }
       } finally {
-        setIsFiltering(false);
+        if (requestId === requestIdRef.current) {
+          setIsFiltering(false);
+        }
       }
     };
 
     applyFilters();
-  }, [filter, page]);
+  }, [filter, page, urlQuery]);
 
   const handleSelectNews = (news: ArticleType) => {
     setSelectedArticle(news);
@@ -587,6 +610,7 @@ export default function NewsSearch({
             data={articlesList}
             onSelect={handleSelectNews}
             selectedData={selectedArticle}
+            loading={isFiltering}
           />
 
           {/* news pagination */}
